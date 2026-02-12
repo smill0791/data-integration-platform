@@ -1,0 +1,164 @@
+# GraphQL Schema for Data Integration Platform
+# This schema defines the API for querying sync jobs, metrics, and triggering operations
+
+# Root Query type - Read operations
+type Query {
+  "Fetch a single sync job by ID"
+  syncJob(id: ID!): SyncJob
+
+  "Fetch multiple sync jobs with filtering and pagination"
+  syncJobs(
+    limit: Int = 20
+    offset: Int = 0
+    filter: SyncJobFilter
+    orderBy: SyncJobOrderBy
+  ): [SyncJob!]!
+
+  "Get sync metrics for a specific time period"
+  syncMetrics(period: MetricsPeriod!): SyncMetrics
+}
+
+# Root Mutation type - Write operations
+type Mutation {
+  "Trigger a new sync job"
+  triggerSync(input: TriggerSyncInput!): SyncJob!
+
+  "Cancel a running sync job"
+  cancelSync(jobId: ID!): SyncJob!
+}
+
+# Root Subscription type - Real-time updates
+type Subscription {
+  "Subscribe to updates for a specific sync job"
+  syncJobUpdated(id: ID!): SyncJob!
+}
+
+# Sync Job - represents a data synchronization task
+type SyncJob {
+  id: ID!
+  sourceName: String!
+  syncType: SyncType!
+  status: SyncStatus!
+  startTime: DateTime!
+  endTime: DateTime
+  recordsProcessed: Int!
+  recordsFailed: Int!
+
+  "Computed field: duration in seconds"
+  duration: Int
+
+  "Computed field: success rate as percentage"
+  successRate: Float
+
+  "Errors that occurred during this sync job"
+  errors(limit: Int = 10): [SyncError!]!
+
+  "Raw staging records for this sync job"
+  stagingRecords(limit: Int = 10): [StagingRecord!]!
+
+  "Validation statistics for this sync job"
+  validationStats: ValidationStats
+}
+
+# Sync Error - represents an error during synchronization
+type SyncError {
+  id: ID!
+  errorType: String
+  errorMessage: String!
+  failedRecord: String
+  occurredAt: DateTime!
+}
+
+# Validation Statistics - data quality metrics
+type ValidationStats {
+  totalRecords: Int!
+  passedValidation: Int!
+  failedValidation: Int!
+  topErrors: [ErrorCount!]!
+}
+
+# Error Count - aggregated error information
+type ErrorCount {
+  errorType: String!
+  count: Int!
+}
+
+# Sync Metrics - aggregated performance metrics
+type SyncMetrics {
+  last24Hours: MetricsSummary!
+  last30Days: MetricsSummary!
+}
+
+# Metrics Summary - statistical summary for a time period
+type MetricsSummary {
+  totalSyncs: Int!
+  successRate: Float!
+  avgDuration: Float!
+  totalRecords: Int!
+  dailyStats: [DailyStats!]!
+}
+
+# Daily Stats - per-day sync statistics
+type DailyStats {
+  date: Date!
+  syncsCompleted: Int!
+  syncsFailed: Int!
+}
+
+# Staging Record - raw data from external source
+type StagingRecord {
+  id: ID!
+  externalId: String
+  rawData: String!
+  receivedAt: DateTime!
+}
+
+# Sync Status - current state of a sync job
+enum SyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+# Sync Type - full or incremental sync
+enum SyncType {
+  FULL
+  INCREMENTAL
+}
+
+# Metrics Period - time range for metrics queries
+enum MetricsPeriod {
+  LAST_24_HOURS
+  LAST_7_DAYS
+  LAST_30_DAYS
+}
+
+# Sync Job Order By - sorting options for sync job queries
+enum SyncJobOrderBy {
+  START_TIME_ASC
+  START_TIME_DESC
+  RECORDS_PROCESSED_DESC
+}
+
+# Sync Job Filter - filtering criteria for sync job queries
+input SyncJobFilter {
+  status: SyncStatus
+  sourceName: String
+  startTime: DateRange
+}
+
+# Date Range - time range filter
+input DateRange {
+  from: DateTime!
+  to: DateTime!
+}
+
+# Trigger Sync Input - parameters for triggering a new sync
+input TriggerSyncInput {
+  sourceName: String!
+  syncType: SyncType = FULL
+}
+
+# Custom Scalars
+scalar DateTime
+scalar Date

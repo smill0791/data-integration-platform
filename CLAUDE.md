@@ -112,6 +112,59 @@ External APIs → Integration Service → SQS Queue → Async Processing
 - Follow atomic design: atoms → molecules → organisms → pages
 - Handle loading states, error states, and empty states gracefully
 
+### GraphQL (Optional Extension)
+
+**Backend Structure** (`backend/src/main/java/com/dataplatform/graphql/`):
+- `SyncJobResolver.java` - GraphQL resolvers for queries, mutations, subscriptions
+- Schema definition: `backend/src/main/resources/graphql/schema.graphqls`
+
+**Frontend Structure**:
+- `lib/apollo-client.ts` - Apollo Client configuration
+- `graphql/queries/` - GraphQL query definitions
+- `graphql/mutations/` - GraphQL mutation definitions
+- `graphql/subscriptions/` - GraphQL subscription definitions (WebSocket)
+
+**GraphQL Patterns**:
+- Use **fragments** for reusable field selections (`SyncJobCoreFields`)
+- Queries for reading data: `useQuery(GET_SYNC_JOBS)`
+- Mutations for writing data: `useMutation(TRIGGER_SYNC)`
+- Subscriptions for real-time updates: `useSubscription(WATCH_SYNC_JOB)`
+- Configure cache policies in Apollo Client for optimal performance
+
+**When to Use**:
+- ✅ Dashboard with complex nested data from multiple sources
+- ✅ Real-time sync monitoring with WebSocket subscriptions
+- ✅ Flexible filtering and field selection
+- ❌ File uploads (use REST)
+- ❌ Simple CRUD operations (use REST)
+
+**GraphQL vs REST**:
+- **REST**: Simple operations, file uploads, webhooks, health checks
+- **GraphQL**: Complex queries, real-time updates, flexible data fetching
+- **Hybrid Approach**: Use both - REST for actions, GraphQL for queries
+
+**Dependencies** (Backend - Maven):
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-graphql</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+
+**Dependencies** (Frontend - npm):
+```bash
+npm install @apollo/client graphql graphql-ws
+```
+
+**Testing GraphQL**:
+- Access GraphiQL at `http://localhost:8080/graphiql`
+- Use `@AutoConfigureGraphQlTester` for Spring Boot tests
+- Mock Apollo Client with `MockedProvider` in React tests
+
 ### Database
 
 **Schema Organization**:
@@ -199,20 +252,27 @@ CREATE TABLE final.orders (...);
 
 ## Current Implementation Status
 
-**Phase**: Initialization
+**Phase**: Initialization & Setup
 - [x] Git repository initialized
-- [x] Project structure created
-- [x] CLAUDE.md created
-- [ ] Docker Compose configured
-- [ ] GitHub repository created
-- [ ] .gitignore files added
+- [x] Project structure created (backend, frontend, mock-apis, database)
+- [x] CLAUDE.md created with development conventions
+- [x] Docker Compose configured (SQL Server + LocalStack)
+- [x] .gitignore files added (root, backend, frontend)
+- [x] GraphQL baseline structure created
+  - [x] Backend GraphQL schema and package structure
+  - [x] Frontend Apollo Client setup and query templates
+  - [x] GraphQL documentation and patterns
+- [ ] GitHub repository created and pushed
+- [ ] Spring Boot backend initialized with dependencies
+- [ ] Database migrations created
 
 **Next Steps**:
-1. Complete infrastructure setup (docker-compose.yml)
-2. Initialize Spring Boot backend with dependencies
+1. Push to GitHub remote repository
+2. Initialize Spring Boot backend with Maven/Gradle
 3. Set up database migrations (Flyway)
 4. Build mock CRM API with Express.js
 5. Implement first integration service (Customer sync)
+6. (Optional) Implement GraphQL resolvers for dashboard
 
 ## Key Design Decisions
 

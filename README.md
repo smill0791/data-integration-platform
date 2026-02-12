@@ -115,6 +115,64 @@ data-integration-platform/
 - Docker - Containerization
 - Docker Compose - Multi-container orchestration
 
+## 🔌 GraphQL Extension (Optional)
+
+In addition to REST APIs, this project includes **GraphQL** support for modern API patterns:
+
+### Why GraphQL?
+
+GraphQL enables efficient data fetching for the dashboard, reducing network overhead:
+
+**Traditional REST (multiple requests)**:
+```javascript
+// 3 separate API calls
+const jobs = await fetch('/api/integrations/jobs');
+const errors = await fetch('/api/integrations/jobs/1/errors');
+const metrics = await fetch('/api/integrations/metrics');
+```
+
+**GraphQL (single request)**:
+```graphql
+query Dashboard {
+  syncJobs(limit: 20) {
+    id
+    sourceName
+    status
+    errors { errorMessage }
+  }
+  syncMetrics(period: LAST_30_DAYS) {
+    successRate
+    totalRecords
+  }
+}
+```
+
+### Features
+
+- **Flexible Queries**: Request exactly the data you need
+- **Real-time Updates**: WebSocket subscriptions for live sync monitoring
+- **Type Safety**: Strongly-typed schema with auto-generated TypeScript types
+- **Single Endpoint**: All data accessible via `/graphql`
+- **Interactive Playground**: GraphiQL interface at `/graphiql`
+
+### When to Use
+
+- ✅ **GraphQL**: Dashboard queries, complex nested data, real-time updates
+- ✅ **REST**: File uploads, simple CRUD, webhooks, health checks
+- 🎯 **Hybrid Approach**: Use both for optimal developer experience
+
+### Technology
+
+**Backend**:
+- Spring for GraphQL - Resolver-based architecture
+- WebFlux - Reactive subscriptions support
+
+**Frontend**:
+- Apollo Client - State management and caching
+- GraphQL WS - WebSocket subscriptions
+
+See [PROJECT_SPEC.md](./PROJECT_SPEC.md#graphql-extension) for complete implementation guide.
+
 ## 🧪 Testing
 
 ```bash
@@ -132,17 +190,25 @@ npm run test:e2e
 
 ## 📈 Implementation Status
 
+**Phase 1: Foundation**
 - [x] Project initialization and structure
 - [x] Infrastructure setup (Docker Compose)
 - [x] Documentation and conventions
+- [x] GraphQL baseline structure and schema
 - [ ] Spring Boot backend with dependencies
 - [ ] Database schema and migrations
 - [ ] Mock external APIs
+
+**Phase 2-3: Core Features**
 - [ ] Integration services
 - [ ] Data transformation pipeline
 - [ ] AWS SQS integration
 - [ ] React dashboard
+
+**Phase 4: Advanced Features**
+- [ ] GraphQL resolvers and subscriptions
 - [ ] Comprehensive testing
+- [ ] Performance optimization
 
 ## 🎓 Learning Objectives
 

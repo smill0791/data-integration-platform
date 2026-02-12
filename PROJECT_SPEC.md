@@ -826,50 +826,413 @@ npm run dev
 
 ---
 
-## Cursor Development Tips
+## Claude Code CLI Development Guide
 
-### Effective Prompting
+### Installation & Setup
 
-When working with Cursor, provide clear context for each feature:
+**Install Claude Code:**
+```bash
+# Install via npm (requires Node.js 18+)
+npm install -g @anthropic-ai/claude-code
 
-**Example Prompt Template:**
-```
-I'm building a data integration platform using Spring Boot and SQL Server.
-Current task: [specific task]
-Context: [what exists so far]
-Requirements: [what you need]
-Please generate: [code/config/tests]
+# Verify installation
+claude --version
 ```
 
-### Iterative Development
+**Requirements:**
+- Active Claude Pro ($20/month) or Claude Max subscription
+- Node.js 18 or higher
+- Git installed (for version control features)
 
-- Start broad: "Create a service that fetches customers from an API"
-- Then refine: "Add pagination support"
-- Then enhance: "Add error handling with custom exceptions"
+### How to Use Claude Code
 
-### Create .cursorrules File
+Claude Code is a terminal-based agentic coding assistant. Here's how to interact with it:
 
-Create a `.cursorrules` file in your project root to maintain consistency:
+#### Starting a Session
 
+**Start a new session:**
+```bash
+# Navigate to your project directory
+cd ~/data-integration-platform
+
+# Start Claude Code
+claude
 ```
-This is a Spring Boot data integration platform.
+
+**Resume your last session:**
+```bash
+claude -c
+```
+
+**Start with a specific prompt:**
+```bash
+claude "Create a Spring Boot project with JPA and SQL Server dependencies"
+```
+
+#### During a Session
+
+Once in a Claude Code session, you can:
+
+**Chat naturally:**
+```
+> Create a SyncJob entity with JPA annotations
+```
+
+**Reference files with @:**
+```
+> Review @src/main/java/com/dataplatform/model/SyncJob.java for issues
+```
+
+**Use slash commands:**
+```
+/help              # Show all available commands
+/init              # Create CLAUDE.md project file
+/clear             # Clear conversation context (use often!)
+/model opus        # Switch to Claude Opus
+/model sonnet      # Switch to Claude Sonnet
+/review            # Review code for issues
+/explain           # Explain code architecture
+```
+
+**Stop Claude (important!):**
+- Press `Escape` to stop Claude's current action
+- Use `Ctrl+C` to exit the session entirely
+
+**View previous messages:**
+- Press `Escape` twice to see message history and jump to any previous message
+
+### Project Configuration with CLAUDE.md
+
+Create a `CLAUDE.md` file in your project root to give Claude persistent context:
+
+```bash
+# Let Claude help you create it
+claude
+> /init
+
+# Or create manually
+```
+
+**Example CLAUDE.md for this project:**
+```markdown
+# Data Integration Platform
+
+## Project Overview
+Enterprise data integration system using Spring Boot, SQL Server, React, and AWS.
+Demonstrates full-stack development skills for financial services applications.
+
+## Technology Stack
+- Backend: Java 17, Spring Boot 3.x, Spring Data JPA, Spring Security
+- Database: SQL Server with Flyway migrations
+- Frontend: React 18, TypeScript, Next.js, TailwindCSS
+- Cloud: AWS (SQS, S3) via LocalStack for local development
+- Testing: JUnit 5, Mockito, Jest, Playwright
+
+## Architecture
+- Four-schema database design: staging → validated → final + audit
+- ETL pipeline: fetch → transform → validate → load
+- Async processing via SQS message queues
+- REST APIs + GraphQL for frontend
+
+## Coding Standards
 - Use constructor injection, not field injection
-- All services should use SLF4J for logging
-- DTOs should be in dto package, entities in model package
+- All services use SLF4J for logging
+- DTOs in dto package, entities in model package
 - Use ResponseEntity for all controller methods
-- Follow REST conventions
-- Validation errors should return 400 with detailed messages
-- Use Spring's @Transactional for database operations
+- Follow REST conventions (GET/POST/PUT/DELETE)
+- Validation errors return 400 with detailed messages
+- Use @Transactional for database operations
+- Test coverage minimum 80%
+
+## File Organization
+- Entities: src/main/java/com/dataplatform/model/
+- Services: src/main/java/com/dataplatform/service/
+- Controllers: src/main/java/com/dataplatform/controller/
+- DTOs: src/main/java/com/dataplatform/dto/
+- Tests: src/test/java/com/dataplatform/
+
+## Database Conventions
+- All tables use BIGINT IDENTITY primary keys
+- Use VARCHAR(MAX) for JSON storage
+- Include created_at and updated_at timestamps
+- Add indexes for foreign keys and commonly queried fields
+- Schema-qualify all table names (staging.raw_customers)
+
+## Important Commands
+# Start infrastructure
+docker-compose up -d
+
+# Run backend
+cd backend && ./mvnw spring-boot:run
+
+# Run tests
+./mvnw test
+
+# Run frontend
+cd frontend && npm run dev
+
+## Known Issues
+- SQL Server Express has 10GB database size limit
+- LocalStack requires restart after machine sleep
+```
+
+### Effective Prompting for Claude Code
+
+**Good prompts are specific and actionable:**
+
+❌ **Bad:**
+```
+> Help me with the sync service
+```
+
+✅ **Good:**
+```
+> Create a CustomerIntegrationService that:
+- Fetches customers from http://localhost:3001/api/customers
+- Handles pagination automatically
+- Saves raw JSON to staging.raw_customers table  
+- Creates SyncJob records to track status
+- Uses @Transactional for database operations
+- Includes error handling and SLF4J logging
+```
+
+**Provide context efficiently:**
+```
+> I'm building the transformation layer. Read @CLAUDE.md for context.
+> Create a CustomerTransformationService that validates and cleans data
+> from staging.raw_customers and saves to validated.validated_customers
+```
+
+**Iterate naturally:**
+```
+> Create the transformation service
+[Claude generates code]
+
+> Add email validation using regex pattern
+[Claude updates code]
+
+> Now add unit tests with Mockito
+[Claude creates test file]
+```
+
+### Advanced Features
+
+#### Custom Commands
+
+Create reusable commands in `.claude/commands/`:
+
+```bash
+mkdir -p .claude/commands
+
+# Create a custom review command
+cat > .claude/commands/security-review.md << 'EOF'
+# Security Review Command
+
+Review the following aspects:
+1. SQL injection vulnerabilities
+2. Authentication/authorization issues  
+3. Sensitive data exposure
+4. Input validation gaps
+5. Error handling that leaks information
+EOF
+```
+
+Use it:
+```
+> /security-review @src/main/java/com/dataplatform/controller/
+```
+
+#### Skills (Project-Specific Knowledge)
+
+Create a skill for complex, repeated tasks:
+
+```bash
+mkdir -p .claude/skills/spring-boot-service
+
+cat > .claude/skills/spring-boot-service/SKILL.md << 'EOF'
+---
+name: spring-boot-service
+description: Create Spring Boot service classes following project conventions
+---
+
+# Spring Boot Service Skill
+
+When creating service classes:
+
+1. Use constructor injection with @RequiredArgsConstructor
+2. Add @Service annotation
+3. Include @Slf4j for logging
+4. Use @Transactional for database operations
+5. Create corresponding DTO classes
+6. Follow repository naming: <Entity>Repository
+7. Add JavaDoc comments
+8. Handle exceptions with custom exception classes
+
+## Example Structure:
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ExampleService {
+    private final ExampleRepository repository;
+    
+    @Transactional
+    public ExampleDTO create(ExampleDTO dto) {
+        log.info("Creating example: {}", dto);
+        // implementation
+    }
+}
+```
+EOF
+```
+
+Claude automatically uses this skill when you ask it to create services.
+
+#### Background Tasks
+
+Run long-running tasks in the background:
+
+```
+> Run all tests in the background
+> Start the Spring Boot application in the background
+> Check background tasks
+```
+
+### Best Practices for This Project
+
+#### 1. Use /clear Frequently
+
+Clear context when switching between major features:
+```
+> /clear
+> Now let's work on the frontend dashboard
+```
+
+#### 2. Generate Complete Features at Once
+
+```
+> Create the complete sync job feature:
+- SyncJob entity with JPA annotations
+- SyncJobRepository with custom queries  
+- SyncJobService with CRUD operations
+- SyncJobController with REST endpoints
+- SyncJobDTO for API responses
+- Unit tests with JUnit and Mockito
+Follow all conventions in @CLAUDE.md
+```
+
+#### 3. Let Claude Handle File Creation
+
+Don't manually create files - let Claude do it:
+```
+> Create the Flyway migration V1__initial_schema.sql in src/main/resources/db/migration/
+> Include all four schemas: staging, validated, final, audit
+```
+
+#### 4. Use @-mentions for Context
+
+```
+> Review @src/main/java/com/dataplatform/service/CustomerIntegrationService.java
+> Add error handling similar to @src/main/java/com/dataplatform/service/SyncJobService.java
+```
+
+#### 5. Test as You Go
+
+```
+> Create integration tests for @src/main/java/com/dataplatform/service/CustomerLoadService.java
+> Use @SpringBootTest and Testcontainers for SQL Server
+```
+
+#### 6. Commit Regularly
+
+Claude can help with git:
+```
+> Create a git commit for the transformation pipeline feature
+> Review git diff and suggest commit message
+```
+
+### Daily Workflow with Claude Code
+
+#### Morning Session (9:00 AM - 11:00 AM)
+
+```bash
+# Start your day
+cd ~/data-integration-platform
+claude
+
+> /clear
+> Read @CLAUDE.md and @PROJECT_SPEC.md
+> Today we're implementing Phase 2: Data Transformation
+> Create the CustomerTransformationService following all conventions
+```
+
+Work for 1-2 hours, letting Claude generate:
+- Service classes
+- Repository interfaces  
+- DTOs
+- Configuration files
+- Initial tests
+
+#### Afternoon Session (1:00 PM - 3:00 PM)
+
+```bash
+# Resume your session
+claude -c
+
+> Review the transformation service we created this morning
+> Add validation rules for email format and phone numbers
+> Create comprehensive unit tests
+```
+
+#### End of Day
+
+```bash
+> Review all changes made today
+> Suggest improvements to the transformation logic
+> Create a git commit summarizing today's work
+> Update @CLAUDE.md with any new conventions we established
+```
+
+### Troubleshooting Common Issues
+
+**Problem: Claude can't find files**
+```
+> /ls src/main/java/com/dataplatform/
+> Show me the directory structure
+```
+
+**Problem: Code doesn't compile**
+```
+> Run mvn clean compile and show me the errors
+> Fix all compilation errors in the service layer
+```
+
+**Problem: Tests failing**
+```
+> Run tests and analyze failures
+> Fix the CustomerTransformationServiceTest failures
+```
+
+**Problem: Need to switch models**
+```
+> /model opus    # For complex architecture decisions
+> /model sonnet  # For faster iteration on simple tasks
 ```
 
 ### Context Management
 
-When asking Cursor for help:
+Claude Code maintains context automatically, but you can optimize it:
 
-1. **Start with architecture**: Share the overall system design first
-2. **Provide examples**: Show similar code that already exists
-3. **Be specific**: "Create a JPA repository for Customer entity with custom query methods"
-4. **Iterate**: Don't expect perfection on first try - refine the output
+**Good practices:**
+- Use `/clear` when switching major features
+- Reference `@CLAUDE.md` at session start
+- Use `@file` mentions instead of copying code
+- Let Claude read error messages from command output
+
+**Avoid:**
+- Pasting large code blocks (use @file instead)
+- Keeping conversation going for 50+ messages without `/clear`
+- Mixing multiple unrelated tasks in one session
 
 ---
 
@@ -1675,6 +2038,369 @@ Implementing GraphQL extension shows:
 - **Apollo Client Docs**: https://www.apollographql.com/docs/react/
 - **GraphQL Spec**: https://spec.graphql.org/
 - **GraphQL Best Practices**: https://graphql.org/learn/best-practices/
+
+---
+
+## Project Timeline with Claude Code CLI
+
+### Realistic Timeline: 3-4 Weeks
+
+With Claude Code CLI and smart usage patterns, you can complete this project in **3-4 weeks** (12-16 working days) without hitting rate limits.
+
+### Daily Session Structure
+
+**Morning Session (2-3 hours)**
+- 9:00 AM: Start Claude Code session, review CLAUDE.md
+- 9:15 AM - 11:00 AM: Generate code (use ~20-25 prompts)
+  - Create entities, services, repositories
+  - Generate configuration files
+  - Build controller endpoints
+- 11:00 AM - 12:00 PM: Independent work
+  - Run generated code
+  - Fix compilation errors
+  - Test endpoints
+
+**Afternoon Session (2-3 hours)**  
+- 1:00 PM - 2:00 PM: Testing & debugging
+  - Test morning's code
+  - Identify issues
+- 2:00 PM - 3:30 PM: Claude Code refinement (use ~15-20 prompts)
+  - Fix issues from testing
+  - Generate tests
+  - Add documentation
+- 3:30 PM - 5:00 PM: Independent work
+  - Run tests
+  - Commit to Git
+  - Update documentation
+
+**Evening (Optional - 1 hour)**
+- Read documentation
+- Watch tutorials
+- No Claude Code usage (save for productive work)
+
+### Week-by-Week Breakdown
+
+#### Week 1: Backend Foundation (Phase 1)
+
+**Monday - Setup (8 sessions)**
+```bash
+claude
+> Read @PROJECT_SPEC.md for context
+> Create Spring Boot project structure with Maven
+> Generate application.yml with SQL Server configuration
+> Create initial domain models: SyncJob, SyncError, Customer
+> Generate docker-compose.yml for SQL Server and LocalStack
+> Create initial Flyway migration with all schemas
+> Start infrastructure and verify connectivity
+> Create basic health check endpoint
+```
+
+**Tuesday - Integration Service (10 sessions)**
+```bash
+claude -c
+> Create CrmApiClient using RestTemplate
+> Implement CustomerIntegrationService with pagination
+> Create SyncJobService to track job status  
+> Build IntegrationController with REST endpoints
+> Generate unit tests for all services
+> Create integration test for end-to-end sync flow
+```
+
+**Wednesday - Mock API (6 sessions)**
+```bash
+claude
+> /clear
+> Create Express.js mock CRM API in mock-apis/crm-api
+> Generate 100 fake customers with Faker
+> Implement pagination and error simulation
+> Test the API with curl
+> Document API endpoints
+```
+
+**Thursday - Transformation (12 sessions)**
+```bash
+claude -c
+> Create CustomerTransformationService
+> Implement data validation rules
+> Add transformation logic (normalize phone, clean addresses)
+> Create validation error logging
+> Generate unit tests with Mockito
+> Test transformation pipeline end-to-end
+```
+
+**Friday - Data Loading (10 sessions)**
+```bash
+claude -c  
+> Create CustomerLoadService with upsert logic
+> Generate SQL Server stored procedure for MERGE operation
+> Implement batch processing for performance
+> Add error handling and transaction management
+> Create comprehensive tests
+> Test full pipeline: fetch → transform → validate → load
+```
+
+#### Week 2: AWS & Advanced Features (Phases 2-3)
+
+**Monday - SQS Integration (12 sessions)**
+```bash
+claude
+> /clear
+> Configure AWS SDK for LocalStack
+> Create SQS queue configuration
+> Implement message sender for sync jobs
+> Create message listener with polling
+> Add retry logic and dead-letter queue
+> Test async workflow
+```
+
+**Tuesday - Scheduler (8 sessions)**
+```bash
+claude -c
+> Create SchedulerService with cron job support
+> Implement scheduled sync triggers
+> Add job monitoring and health checks
+> Generate tests for scheduler
+```
+
+**Wednesday - Error Handling (10 sessions)**
+```bash
+claude -c
+> Review all services for error handling gaps
+> Create custom exception classes
+> Implement global exception handler
+> Add comprehensive error logging
+> Test error scenarios
+```
+
+**Thursday - Metrics (10 sessions)**
+```bash
+claude -c
+> Create MetricsService for sync statistics
+> Implement aggregation queries
+> Add performance tracking
+> Generate reports endpoint
+> Create tests
+```
+
+**Friday - Integration Testing (8 sessions)**
+```bash
+claude -c
+> Create comprehensive integration test suite
+> Use Testcontainers for SQL Server
+> Test complete workflows
+> Verify all schemas and data flow
+> Document test coverage
+```
+
+#### Week 3: Frontend & Real-time Features (Phase 4)
+
+**Monday - Next.js Setup (10 sessions)**
+```bash
+claude
+> /clear
+> Create Next.js 14 app with TypeScript
+> Configure TailwindCSS
+> Set up project structure
+> Create layout and basic routing
+> Add environment configuration
+```
+
+**Tuesday - Dashboard Components (15 sessions)**
+```bash
+claude -c
+> Create SyncJobTable component
+> Implement TriggerSyncButton
+> Add status badges and formatting
+> Create MetricsCard component
+> Build navigation and layout
+> Style with TailwindCSS
+```
+
+**Wednesday - Data Fetching (12 sessions)**
+```bash
+claude -c
+> Set up React Query
+> Create API client service
+> Implement data fetching hooks
+> Add loading and error states
+> Test with real backend
+```
+
+**Thursday - Charts & Visualization (12 sessions)**
+```bash
+claude -c
+> Install and configure Recharts
+> Create SyncMetricsChart component
+> Implement success rate chart
+> Add daily statistics visualization
+> Style charts for professional appearance
+```
+
+**Friday - Real-time Updates (10 sessions)**
+```bash
+claude -c
+> Implement polling with React Query
+> Add real-time status updates
+> Create WebSocket connection (if using subscriptions)
+> Test live updates during sync
+> Polish UX and animations
+```
+
+#### Week 4: Testing, Polish & GraphQL (Phase 5 + Extension)
+
+**Monday - Backend Testing (12 sessions)**
+```bash
+claude
+> /clear
+> Generate unit tests for all services
+> Create integration tests for controllers
+> Add tests for edge cases
+> Achieve 80%+ code coverage
+> Fix any test failures
+```
+
+**Tuesday - Frontend Testing (10 sessions)**
+```bash
+claude -c
+> Create Jest tests for components
+> Add React Testing Library tests
+> Implement E2E tests with Playwright
+> Test user workflows
+> Fix any issues
+```
+
+**Wednesday - GraphQL Setup (12 sessions)**
+```bash
+claude -c
+> Add GraphQL dependencies to Spring Boot
+> Create schema.graphqls with all types
+> Generate GraphQL resolvers
+> Configure Apollo Client in frontend
+> Create GraphQL queries and mutations
+```
+
+**Thursday - GraphQL Features (10 sessions)**
+```bash
+claude -c
+> Implement subscriptions for real-time updates
+> Add computed fields (duration, successRate)
+> Create GraphQL integration tests
+> Update frontend to use GraphQL
+> Test GraphQL endpoints with GraphiQL
+```
+
+**Friday - Documentation & Polish (8 sessions)**
+```bash
+claude -c
+> Generate comprehensive README.md
+> Create API documentation
+> Add inline code comments
+> Update CLAUDE.md with lessons learned
+> Prepare demo script
+> Take screenshots for portfolio
+```
+
+### Usage Optimization Tips
+
+#### Batch Your Requests
+
+❌ **Inefficient (uses 5+ prompts):**
+```
+> Create Customer entity
+[wait]
+> Create SyncJob entity  
+[wait]
+> Create SyncError entity
+[wait]
+> Add JPA annotations
+[wait]
+> Add Lombok annotations
+```
+
+✅ **Efficient (uses 1 prompt):**
+```
+> Create three JPA entities with Lombok annotations:
+1. Customer (id, externalId, name, email, phone, address)
+2. SyncJob (id, sourceName, status, startTime, endTime, recordsProcessed, recordsFailed)
+3. SyncError (id, syncJobId, errorMessage, failedRecord, occurredAt)
+
+Include all JPA relationships, indexes, and proper column types.
+Follow conventions in @CLAUDE.md
+```
+
+#### Front-Load Complex Work
+
+Use more prompts early in the day for generation, fewer later for fixes:
+- **Morning:** 20-25 prompts (heavy generation)
+- **Afternoon:** 15-20 prompts (refinement)
+- **Evening:** 0 prompts (independent work)
+
+#### Strategic /clear Usage
+
+Clear context when switching major features to save tokens:
+```
+# Finished backend work
+> /clear
+
+# Start frontend work  
+> Read @CLAUDE.md for project context
+> Now let's build the React dashboard
+```
+
+### Avoiding Rate Limits
+
+**If you hit the limit:**
+
+1. **Switch to independent work**
+   - Run tests manually
+   - Fix bugs yourself
+   - Read documentation
+   - Refactor code
+
+2. **Take strategic breaks**
+   - Take a walk (limits reset on rolling 5-hour window)
+   - Plan next steps on paper
+   - Review code you've written
+   - Watch tutorials
+
+3. **Use other resources**
+   - Stack Overflow for specific errors
+   - Spring Boot documentation
+   - GitHub for examples
+   - ChatGPT free tier for quick syntax questions
+
+### Expected Daily Progress
+
+**Good Days (Everything Works):**
+- 3-4 complete features
+- 10-15 test cases
+- All code compiling
+- ~35-40 prompts used
+
+**Normal Days (Some Debugging):**
+- 2-3 features  
+- Some tests written
+- Most code working
+- ~40-45 prompts used
+
+**Challenging Days (Complex Problems):**
+- 1-2 features with iteration
+- Complex debugging
+- May hit limit, switch to independent work
+- ~45-50 prompts used (may hit limit)
+
+### Final Recommendation
+
+**Target: 3 weeks core + 1 week polish**
+
+- **Weeks 1-2:** Backend fully functional (demo-able)
+- **Week 3:** Frontend dashboard (portfolio-ready)
+- **Week 4:** Testing + GraphQL (interview impressive)
+
+This timeline allows you to:
+- Apply to jobs with working backend after 2 weeks
+- Show visual demo after 3 weeks
+- Discuss GraphQL expertise after 4 weeks
 
 ---
 
