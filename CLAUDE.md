@@ -1,0 +1,310 @@
+# Multi-Source Data Integration Platform
+
+## Project Overview
+
+This is a comprehensive enterprise data integration platform built to demonstrate proficiency in modern full-stack development. The system simulates real-world data integration challenges faced by financial services and enterprise organizations.
+
+**Purpose**: Portfolio project showcasing Spring Boot, SQL Server, React, AWS integration, and enterprise architecture patterns.
+
+**Full Specification**: See [PROJECT_SPEC.md](./PROJECT_SPEC.md) for complete technical details, implementation phases, and architecture diagrams.
+
+## Technology Stack
+
+### Backend
+- **Java 17+** with Spring Boot 3.x
+- **Spring Data JPA** for ORM with Hibernate
+- **Spring Security** for authentication and authorization
+- **Spring Web** for REST APIs
+- **AWS SDK** for SQS and S3 integration
+- **Lombok** to reduce boilerplate
+- **Flyway** for database migrations
+- **JUnit 5 + Mockito** for testing
+
+### Database
+- **SQL Server 2019+** (containerized via Docker)
+- **Four-schema architecture**:
+  - `staging` - Raw data from external sources (JSON payloads)
+  - `validated` - Data that passed validation rules
+  - `final` - Production-ready data for reporting
+  - `audit` - Sync job tracking, error logs, data lineage
+
+### Frontend
+- **React 18** with TypeScript
+- **Next.js 14** (App Router)
+- **TailwindCSS** for styling
+- **React Query** for state management and data fetching
+- **Recharts** for data visualization
+- **Apollo Client** (optional GraphQL extension)
+
+### Infrastructure
+- **Docker** and **Docker Compose** for local development
+- **LocalStack** for AWS service mocking (SQS, S3)
+- **GitHub Actions** for CI/CD (future)
+
+## Architecture Overview
+
+```
+External APIs → Integration Service → SQS Queue → Async Processing
+                                         ↓
+                            Staging Schema (raw JSON)
+                                         ↓
+                            Transformation & Validation
+                                         ↓
+                            Validated Schema (clean data)
+                                         ↓
+                            Load Service (MERGE/upsert)
+                                         ↓
+                            Final Schema (production data)
+
+                            Audit Schema (tracks everything)
+                                         ↓
+                            React Dashboard (monitoring & metrics)
+```
+
+### Data Flow Principles
+
+1. **Extract**: Fetch data from external APIs (CRM, ERP, Accounting)
+2. **Stage**: Store raw JSON payloads in `staging` schema with sync_job_id linkage
+3. **Transform**: Parse, clean, normalize data (phone numbers, emails, addresses)
+4. **Validate**: Apply business rules, check required fields, validate formats
+5. **Load**: MERGE into `final` schema (INSERT new, UPDATE existing by external_id)
+6. **Audit**: Track all sync operations, errors, and data lineage
+
+## Code Conventions & Patterns
+
+### Backend (Spring Boot)
+
+**Package Structure**:
+- `config/` - Spring configuration classes (AWS, Security, Database)
+- `controller/` - REST API endpoints (use `@RestController`, return `ResponseEntity`)
+- `service/` - Business logic layer (use `@Service`, `@Transactional`)
+- `repository/` - Data access layer (extend `JpaRepository`)
+- `model/` - JPA entities (use `@Entity`, map to database tables)
+- `dto/` - Data Transfer Objects for API requests/responses
+- `integration/` - External API clients (use `RestTemplate` or `WebClient`)
+- `transformer/` - Data transformation logic
+- `validator/` - Custom validation rules
+- `exception/` - Custom exceptions and global exception handlers
+
+**Standards**:
+- Use **constructor injection**, NOT field injection (`@RequiredArgsConstructor` from Lombok)
+- Use **SLF4J** for logging: `@Slf4j` annotation, then `log.info()`, `log.error()`
+- All controller methods return `ResponseEntity<T>` for consistent HTTP responses
+- Use `@Transactional` on service methods that modify data
+- Validation errors return **400 Bad Request** with detailed error messages
+- Follow REST conventions: GET (read), POST (create), PUT (update), DELETE (remove)
+- Store credentials in `application.yml` with environment variable placeholders
+
+### Frontend (React/Next.js)
+
+**Component Structure**:
+- `app/` - Next.js app router pages and layouts
+- `components/` - Reusable React components (PascalCase naming)
+- `hooks/` - Custom React hooks (prefix with `use`, e.g., `useSyncJobs`)
+- `services/` - API client functions (e.g., `syncJobService.ts`)
+- `types/` - TypeScript type definitions and interfaces
+
+**Standards**:
+- Use **TypeScript** strictly, avoid `any` types
+- Components are **function components** with hooks
+- Use **React Query** for server state (caching, refetching, mutations)
+- Use **TailwindCSS** utility classes for styling
+- Follow atomic design: atoms → molecules → organisms → pages
+- Handle loading states, error states, and empty states gracefully
+
+### Database
+
+**Schema Organization**:
+```sql
+-- Audit tables track all sync activity
+CREATE TABLE audit.sync_jobs (...);
+CREATE TABLE audit.sync_errors (...);
+
+-- Staging holds raw data exactly as received
+CREATE TABLE staging.raw_customers (...);
+CREATE TABLE staging.raw_orders (...);
+
+-- Validated holds cleaned, validated data
+CREATE TABLE validated.validated_customers (...);
+CREATE TABLE validated.validated_orders (...);
+
+-- Final holds production data with upsert logic
+CREATE TABLE final.customers (...);
+CREATE TABLE final.orders (...);
+```
+
+**Flyway Migrations**:
+- Files go in `backend/src/main/resources/db/migration/`
+- Naming: `V1__initial_schema.sql`, `V2__add_orders_table.sql`
+- Never modify existing migrations, always create new ones
+- Use `CREATE INDEX` for columns used in WHERE clauses and JOINs
+
+**Stored Procedures**:
+- Use for bulk operations (MERGE upsert logic)
+- Example: `final.upsert_customers` procedure
+
+## Development Workflow
+
+### Local Environment Setup
+
+1. **Start infrastructure**:
+   ```bash
+   docker-compose up -d
+   ```
+   This starts SQL Server (port 1433) and LocalStack (port 4566)
+
+2. **Run backend**:
+   ```bash
+   cd backend
+   ./mvnw spring-boot:run
+   ```
+   Backend runs on http://localhost:8080
+
+3. **Run mock API**:
+   ```bash
+   cd mock-apis/crm-api
+   npm install && npm start
+   ```
+   Mock CRM API runs on http://localhost:3001
+
+4. **Run frontend**:
+   ```bash
+   cd frontend
+   npm install && npm run dev
+   ```
+   Frontend runs on http://localhost:3000
+
+### Database Connection
+- **Host**: localhost:1433
+- **Username**: sa
+- **Password**: YourStrong@Passw0rd
+- **Tool**: Azure Data Studio, DBeaver, or SQL Server Management Studio
+
+### Testing Strategy
+
+**Unit Tests** (JUnit + Mockito):
+- Test service layer methods in isolation
+- Mock all dependencies (repositories, API clients)
+- Target >80% code coverage
+- Run: `./mvnw test`
+
+**Integration Tests** (Spring Boot Test + Testcontainers):
+- Test with real database (SQL Server container)
+- Test full sync flow: fetch → transform → validate → load
+- Verify data in all schemas
+
+**E2E Tests** (Playwright):
+- Test complete user workflows through UI
+- Trigger sync, verify status updates, check job details
+
+## Current Implementation Status
+
+**Phase**: Initialization
+- [x] Git repository initialized
+- [x] Project structure created
+- [x] CLAUDE.md created
+- [ ] Docker Compose configured
+- [ ] GitHub repository created
+- [ ] .gitignore files added
+
+**Next Steps**:
+1. Complete infrastructure setup (docker-compose.yml)
+2. Initialize Spring Boot backend with dependencies
+3. Set up database migrations (Flyway)
+4. Build mock CRM API with Express.js
+5. Implement first integration service (Customer sync)
+
+## Key Design Decisions
+
+### Why Four Schemas?
+- **Staging**: Preserves raw data for replay if transformation logic changes
+- **Validated**: Intermediate checkpoint for data quality review
+- **Final**: Optimized for queries, contains production data
+- **Audit**: Permanent records for compliance and debugging
+
+### Why SQS?
+- **Decoupling**: Sync requests can be queued even if workers are busy
+- **Scalability**: Multiple workers can process queue in parallel
+- **Reliability**: Built-in retry logic and dead-letter queues
+- **LocalStack**: Test AWS integration without cloud costs
+
+### Why Next.js?
+- **Server Components**: Improved performance with React Server Components
+- **API Routes**: Can serve backend APIs if needed
+- **TypeScript**: Built-in support without extra configuration
+- **Production-Ready**: Image optimization, routing, SEO built-in
+
+## Common Commands
+
+### Docker
+```bash
+docker-compose up -d              # Start all services
+docker-compose down               # Stop all services
+docker-compose logs -f sqlserver  # View SQL Server logs
+docker-compose ps                 # Check running services
+```
+
+### Backend (Maven)
+```bash
+./mvnw spring-boot:run           # Run Spring Boot app
+./mvnw test                      # Run all tests
+./mvnw clean package             # Build JAR file
+./mvnw flyway:migrate            # Run database migrations
+./mvnw flyway:info               # Check migration status
+```
+
+### Frontend (npm)
+```bash
+npm run dev                      # Start dev server
+npm run build                    # Build for production
+npm test                         # Run Jest tests
+npm run lint                     # Run ESLint
+```
+
+### Git
+```bash
+git status                       # Check repository status
+git add .                        # Stage all changes
+git commit -m "message"          # Commit changes
+git push origin main             # Push to GitHub
+```
+
+## Troubleshooting
+
+### SQL Server won't start
+- Check Docker Desktop is running
+- Ensure port 1433 is not in use: `lsof -i :1433`
+- Check logs: `docker-compose logs sqlserver`
+- Try stronger password in docker-compose.yml
+
+### Backend can't connect to database
+- Verify SQL Server container is running: `docker ps`
+- Check `application.yml` has correct connection string
+- Test connection manually with Azure Data Studio
+- Check Flyway migrations completed successfully
+
+### Mock API returns 404
+- Ensure Express server is running on port 3001
+- Check if port is already in use: `lsof -i :3001`
+- Verify routes are registered: check `mock-apis/crm-api/server.js`
+
+### Frontend can't reach backend
+- Verify backend is running on port 8080
+- Check CORS configuration in Spring Security
+- Inspect browser Network tab for errors
+- Ensure API base URL is correct in frontend service
+
+## Resources & References
+
+- **Spring Boot Docs**: https://spring.io/projects/spring-boot
+- **SQL Server Docker**: https://hub.docker.com/_/microsoft-mssql-server
+- **Next.js Docs**: https://nextjs.org/docs
+- **React Query**: https://tanstack.com/query/latest
+- **LocalStack**: https://docs.localstack.cloud/
+- **Flyway**: https://flywaydb.org/documentation/
+
+## Notes
+
+This project is designed to be portfolio-ready and demonstrates skills required for enterprise full-stack development roles. It showcases real-world integration patterns, data quality management, and modern development practices.
+
+For complete implementation guide with day-by-day tasks and Cursor AI prompts, see [PROJECT_SPEC.md](./PROJECT_SPEC.md).
