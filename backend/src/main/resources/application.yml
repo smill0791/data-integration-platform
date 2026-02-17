@@ -37,6 +37,12 @@ spring:
       printer:
         enabled: true
 
+integration:
+  crm:
+    base-url: ${CRM_API_URL:http://localhost:3001}
+    page-size: ${CRM_PAGE_SIZE:20}
+    max-retries: ${CRM_MAX_RETRIES:3}
+
 logging:
   level:
     root: INFO
