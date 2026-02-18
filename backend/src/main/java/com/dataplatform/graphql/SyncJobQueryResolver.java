@@ -12,9 +12,7 @@ import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -83,6 +81,35 @@ public class SyncJobQueryResolver {
                 "last24Hours", last24Hours,
                 "last30Days", last30Days
         );
+    }
+
+    // Convert LocalDateTime → OffsetDateTime for the GraphQL DateTime scalar
+    @SchemaMapping(typeName = "SyncJob", field = "startTime")
+    public OffsetDateTime startTime(SyncJob job) {
+        return job.getStartTime() != null
+                ? job.getStartTime().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+                : null;
+    }
+
+    @SchemaMapping(typeName = "SyncJob", field = "endTime")
+    public OffsetDateTime endTime(SyncJob job) {
+        return job.getEndTime() != null
+                ? job.getEndTime().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+                : null;
+    }
+
+    @SchemaMapping(typeName = "SyncError", field = "occurredAt")
+    public OffsetDateTime occurredAt(SyncError error) {
+        return error.getOccurredAt() != null
+                ? error.getOccurredAt().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+                : null;
+    }
+
+    @SchemaMapping(typeName = "StagingRecord", field = "receivedAt")
+    public OffsetDateTime receivedAt(RawCustomer record) {
+        return record.getReceivedAt() != null
+                ? record.getReceivedAt().atZone(ZoneId.systemDefault()).toOffsetDateTime()
+                : null;
     }
 
     @SchemaMapping(typeName = "SyncJob", field = "duration")

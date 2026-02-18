@@ -206,26 +206,20 @@ CREATE TABLE final.orders (...);
    ```
    This starts SQL Server (port 1433) and LocalStack (port 4566)
 
-2. **Run backend**:
+2. **Start all services** (recommended):
    ```bash
-   cd backend
-   ./mvnw spring-boot:run
+   ./start-dev.sh
    ```
-   Backend runs on http://localhost:8080
+   This starts the Mock CRM API (3001), Spring Boot backend (8080), and Next.js frontend (3000) together. It auto-kills stale processes on those ports. Press Ctrl+C to stop all.
 
-3. **Run mock API**:
+3. **Or start services individually**:
    ```bash
-   cd mock-apis/crm-api
-   npm install && npm start
+   cd backend && ./mvnw spring-boot:run    # Backend on http://localhost:8080
+   cd mock-apis/crm-api && npm start       # Mock CRM API on http://localhost:3001
+   cd frontend && npm run dev              # Frontend on http://localhost:3000
    ```
-   Mock CRM API runs on http://localhost:3001
 
-4. **Run frontend**:
-   ```bash
-   cd frontend
-   npm install && npm run dev
-   ```
-   Frontend runs on http://localhost:3000
+4. **GraphiQL**: http://localhost:8080/graphiql — interactive GraphQL query editor
 
 ### Database Connection
 - **Host**: localhost:1433
@@ -372,7 +366,8 @@ CREATE TABLE final.orders (...);
 - [x] Backend GraphQL resolvers
   - [x] `SyncJobEventPublisher` — Reactor Sinks.Many for real-time event streaming
   - [x] `SyncJobQueryResolver` — `syncJob`, `syncJobs` (filter/sort/paginate), `syncMetrics` queries
-  - [x] `SyncJobQueryResolver` field resolvers — `duration`, `successRate`, `errors`, `stagingRecords`, `validationStats`
+  - [x] `SyncJobQueryResolver` field resolvers — `startTime`, `endTime` (LocalDateTime→OffsetDateTime), `duration`, `successRate`, `errors`, `stagingRecords`, `validationStats`
+  - [x] `SyncError.occurredAt` and `StagingRecord.receivedAt` DateTime field resolvers
   - [x] `SyncJobMutationResolver` — `triggerSync`, `cancelSync` mutations
   - [x] `SyncJobSubscriptionResolver` — `syncJobUpdated` WebSocket subscription
   - [x] `SyncJobService` wired to publish events on create/complete/fail
@@ -393,6 +388,7 @@ CREATE TABLE final.orders (...);
   - [x] WATCH_SYNC_JOB subscription updated with `endTime` field
   - [x] GraphQL-specific TypeScript types added (ValidationStats, StagingRecord, SyncMetrics, MetricsSummary, GraphQLSyncJob)
 - [x] `reactor-test` dependency added to pom.xml for Flux testing
+- [x] `start-dev.sh` improved — auto-kills stale processes on ports 3000/3001/8080, removed `set -e`
 
 **Future Phases**:
 - **Phase 6**: SQS async processing via LocalStack — decouple sync triggers from processing
@@ -478,6 +474,18 @@ git push origin main             # Push to GitHub
 - Check CORS configuration in Spring Security
 - Inspect browser Network tab for errors
 - Ensure API base URL is correct in frontend service
+
+### GraphQL DateTime serialization errors
+- Error: `Can't serialize value ... Expected 'java.time.OffsetDateTime' but was 'LocalDateTime'`
+- The `graphql-java-extended-scalars` `DateTime` scalar requires `OffsetDateTime`, not `LocalDateTime`
+- All JPA entities use `LocalDateTime` for database compatibility
+- Fix: Add `@SchemaMapping` field resolvers that convert `LocalDateTime` → `OffsetDateTime` via `localDateTime.atZone(ZoneId.systemDefault()).toOffsetDateTime()`
+- These resolvers exist in `SyncJobQueryResolver` for `startTime`, `endTime`, `occurredAt`, `receivedAt`
+
+### Port conflicts when starting dev services
+- Error: `Port 3000 is in use, trying 3001 instead` — Next.js collides with Mock CRM API
+- The improved `start-dev.sh` script auto-kills stale processes on ports 3000/3001/8080
+- Manual fix: `lsof -ti :3000 | xargs kill` (repeat for 3001, 8080)
 
 ## Resources & References
 
