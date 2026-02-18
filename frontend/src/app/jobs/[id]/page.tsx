@@ -2,17 +2,40 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useSyncJob } from '@/hooks/useSyncJob';
-import { useSyncErrors } from '@/hooks/useSyncErrors';
+import { useGraphQLSyncJob } from '@/hooks/useGraphQLSyncJob';
 import SyncJobDetails from '@/components/SyncJobDetails';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorAlert from '@/components/ErrorAlert';
+import { SyncJob, SyncError } from '@/types/syncJob';
 
 export default function JobDetailPage() {
   const params = useParams();
-  const jobId = Number(params.id);
-  const { data: job, isLoading: jobLoading, error: jobError } = useSyncJob(jobId);
-  const { data: errors, isLoading: errorsLoading } = useSyncErrors(jobId);
+  const jobId = String(params.id);
+  const { job, loading, error } = useGraphQLSyncJob(jobId);
+
+  // Adapt GraphQL job to existing component interfaces
+  const adaptedJob: SyncJob | null = job
+    ? {
+        id: Number(job.id),
+        sourceName: job.sourceName,
+        syncType: job.syncType,
+        status: job.status,
+        startTime: job.startTime,
+        endTime: job.endTime,
+        recordsProcessed: job.recordsProcessed,
+        recordsFailed: job.recordsFailed,
+        errorMessage: null,
+        createdAt: job.startTime,
+      }
+    : null;
+
+  const errors: SyncError[] = (job?.errors ?? []).map((e) => ({
+    id: Number(e.id),
+    errorType: e.errorType ?? '',
+    errorMessage: e.errorMessage,
+    failedRecord: e.failedRecord ?? null,
+    occurredAt: e.occurredAt,
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,21 +44,21 @@ export default function JobDetailPage() {
           &larr; Back to Dashboard
         </Link>
 
-        {jobError && (
+        {error && (
           <div className="mt-4">
-            <ErrorAlert message={jobError.message} />
+            <ErrorAlert message={error.message} />
           </div>
         )}
 
-        {jobLoading || errorsLoading ? (
+        {loading ? (
           <LoadingSpinner />
-        ) : job ? (
+        ) : adaptedJob ? (
           <>
             <h1 className="mt-4 text-2xl font-bold text-gray-900">
-              Sync Job #{job.id} — {job.sourceName}
+              Sync Job #{adaptedJob.id} — {adaptedJob.sourceName}
             </h1>
             <div className="mt-6">
-              <SyncJobDetails job={job} errors={errors || []} />
+              <SyncJobDetails job={adaptedJob} errors={errors} />
             </div>
           </>
         ) : null}

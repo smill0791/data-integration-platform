@@ -17,6 +17,7 @@ export const WATCH_SYNC_JOB = gql`
       status
       recordsProcessed
       recordsFailed
+      endTime
       duration
       successRate
     }

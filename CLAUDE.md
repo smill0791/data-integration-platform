@@ -368,8 +368,33 @@ CREATE TABLE final.orders (...);
   - [x] `app/jobs/[id]/page.tsx` — job detail with auto-polling while RUNNING
 - [x] `start-dev.sh` — single script to start backend, mock API, and frontend together
 
+**Phase 5: GraphQL Resolvers for Real-Time Dashboard** (Complete)
+- [x] Backend GraphQL resolvers
+  - [x] `SyncJobEventPublisher` — Reactor Sinks.Many for real-time event streaming
+  - [x] `SyncJobQueryResolver` — `syncJob`, `syncJobs` (filter/sort/paginate), `syncMetrics` queries
+  - [x] `SyncJobQueryResolver` field resolvers — `duration`, `successRate`, `errors`, `stagingRecords`, `validationStats`
+  - [x] `SyncJobMutationResolver` — `triggerSync`, `cancelSync` mutations
+  - [x] `SyncJobSubscriptionResolver` — `syncJobUpdated` WebSocket subscription
+  - [x] `SyncJobService` wired to publish events on create/complete/fail
+  - [x] `SyncJobRepository.findAllByOrderByStartTimeDesc()` added
+- [x] Backend unit tests (17 new, 55 total passing)
+  - [x] `SyncJobEventPublisherTest` — 3 tests (matching ID, filtering, multiple subscribers)
+  - [x] `SyncJobQueryResolverTest` — 10 tests (queries, filters, computed fields, metrics)
+  - [x] `SyncJobMutationResolverTest` — 3 tests (trigger, cancel running, cancel completed)
+  - [x] `SyncJobServiceTest` — +1 test (verify event publishing)
+- [x] Frontend GraphQL migration
+  - [x] `useGraphQLDashboard` — Apollo `useQuery` with 10s polling for dashboard data + server metrics
+  - [x] `useGraphQLSyncJob` — `useQuery` + `useSubscription` (WATCH_SYNC_JOB) for real-time job detail
+  - [x] `useGraphQLTriggerSync` — Apollo `useMutation` with refetchQueries
+  - [x] Dashboard page migrated to GraphQL (server-computed metrics)
+  - [x] Job detail page migrated to GraphQL with subscription for real-time updates
+  - [x] TriggerSyncButton migrated to GraphQL mutation
+  - [x] Apollo Client cache fixed (replace strategy for syncJobs)
+  - [x] WATCH_SYNC_JOB subscription updated with `endTime` field
+  - [x] GraphQL-specific TypeScript types added (ValidationStats, StagingRecord, SyncMetrics, MetricsSummary, GraphQLSyncJob)
+- [x] `reactor-test` dependency added to pom.xml for Flux testing
+
 **Future Phases**:
-- **Phase 5**: GraphQL resolvers for real-time dashboard updates (subscriptions)
 - **Phase 6**: SQS async processing via LocalStack — decouple sync triggers from processing
 - **Phase 7**: Additional data sources (ERP, Accounting mock APIs)
 - **Phase 8**: CI/CD with GitHub Actions, integration tests with Testcontainers

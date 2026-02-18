@@ -3,6 +3,7 @@ package com.dataplatform.service;
 import com.dataplatform.dto.SyncErrorDTO;
 import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.exception.ResourceNotFoundException;
+import com.dataplatform.graphql.SyncJobEventPublisher;
 import com.dataplatform.model.SyncJob;
 import com.dataplatform.repository.SyncErrorRepository;
 import com.dataplatform.repository.SyncJobRepository;
@@ -21,6 +22,7 @@ public class SyncJobService {
 
     private final SyncJobRepository syncJobRepository;
     private final SyncErrorRepository syncErrorRepository;
+    private final SyncJobEventPublisher eventPublisher;
 
     @Transactional
     public SyncJob createJob(String sourceName, String syncType) {
@@ -32,6 +34,7 @@ public class SyncJobService {
                 .build();
         SyncJob saved = syncJobRepository.save(job);
         log.info("Created sync job {} for source={} type={}", saved.getId(), sourceName, syncType);
+        eventPublisher.publish(saved);
         return saved;
     }
 
@@ -44,6 +47,7 @@ public class SyncJobService {
         SyncJob saved = syncJobRepository.save(job);
         log.info("Completed sync job {}: processed={}, failed={}, status={}",
                 saved.getId(), recordsProcessed, recordsFailed, saved.getStatus());
+        eventPublisher.publish(saved);
         return saved;
     }
 
@@ -54,6 +58,7 @@ public class SyncJobService {
         job.setErrorMessage(errorMessage);
         SyncJob saved = syncJobRepository.save(job);
         log.error("Failed sync job {}: {}", saved.getId(), errorMessage);
+        eventPublisher.publish(saved);
         return saved;
     }
 

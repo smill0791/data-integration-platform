@@ -14,4 +14,6 @@ public interface SyncJobRepository extends JpaRepository<SyncJob, Long> {
     List<SyncJob> findTop20ByOrderByStartTimeDesc();
 
     List<SyncJob> findBySourceNameOrderByStartTimeDesc(String sourceName);
+
+    List<SyncJob> findAllByOrderByStartTimeDesc();
 }
