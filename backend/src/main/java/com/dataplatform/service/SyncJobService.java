@@ -60,6 +60,11 @@ public class SyncJobService {
         return SyncJobDTO.fromEntity(job);
     }
 
+    public SyncJob getJobEntity(Long id) {
+        return syncJobRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + id));
+    }
+
     public List<SyncJobDTO> getRecentJobs() {
         return syncJobRepository.findTop20ByOrderByStartTimeDesc()
                 .stream()

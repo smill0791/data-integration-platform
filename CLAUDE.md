@@ -252,7 +252,7 @@ CREATE TABLE final.orders (...);
 
 ## Current Implementation Status
 
-**Phase**: Backend Foundation (Phase 1)
+**Phase 1: Backend Foundation** (Complete)
 - [x] Git repository initialized
 - [x] Project structure created (backend, frontend, mock-apis, database)
 - [x] CLAUDE.md created with development conventions
@@ -285,13 +285,69 @@ CREATE TABLE final.orders (...);
 - [x] Context load test passing (DataIntegrationApplicationTests)
 - [x] Docker Compose health check fixed (mssql-tools18 path)
 
-**Next Steps**:
-1. Build mock CRM API with Express.js
-2. Implement CRM API client and CustomerIntegrationService
-3. Create SyncJobService and IntegrationController
-4. Build transformation pipeline (CustomerTransformationService)
-5. Build data loading service with upsert logic
-6. (Optional) Implement GraphQL resolvers for dashboard
+**Phase 2: CRM API Integration Pipeline** (Complete)
+- [x] Mock CRM API (Express.js)
+  - [x] 100 fake customers generated at startup via @faker-js/faker
+  - [x] `GET /api/customers?page=0&size=20` — paginated response
+  - [x] `GET /api/customers/:id` — single customer lookup
+  - [x] Random delay (100-500ms) and 5% simulated failure rate
+- [x] DTOs
+  - [x] `CrmCustomerResponse` — CRM customer with nested Address
+  - [x] `PaginatedResponse<T>` — generic paginated wrapper
+  - [x] `SyncJobDTO` — API response DTO with `fromEntity()` converter
+- [x] Exception handling
+  - [x] `IntegrationException` — upstream API failures (maps to 502)
+  - [x] `ResourceNotFoundException` — missing entities (maps to 404)
+  - [x] `GlobalExceptionHandler` — @RestControllerAdvice with structured error responses
+- [x] REST client infrastructure
+  - [x] `RestTemplateConfig` — RestTemplate bean with 5s connect / 10s read timeouts
+  - [x] `CrmApiClient` — paginated fetch, retry logic (3 attempts, exponential backoff)
+  - [x] CRM integration properties in application.yml (`integration.crm.*`)
+- [x] Service layer
+  - [x] `SyncJobService` — sync job lifecycle (create, complete, fail) with individual @Transactional boundaries
+  - [x] `CustomerIntegrationService` — orchestrates fetch → stage → audit with per-record error isolation
+- [x] REST controller
+  - [x] `POST /api/integrations/sync/customers` — trigger customer sync
+  - [x] `GET /api/integrations/jobs` — list recent sync jobs
+  - [x] `GET /api/integrations/jobs/{id}` — get sync job by ID
+- [x] Unit tests (12/12 passing)
+  - [x] `SyncJobServiceTest` — 7 tests (create, complete, fail, get, not-found, recent)
+  - [x] `CustomerIntegrationServiceTest` — 4 tests (success, partial failure, API failure, empty response)
+- [x] Build fixes
+  - [x] Lombok annotation processor configured in maven-compiler-plugin
+  - [x] byte-buddy upgraded to 1.15.11 for Java 23 compatibility
+
+**Phase 3: Transformation & Loading Pipeline** (Complete)
+- [x] Flyway migration V2 — `[final].upsert_customers` stored procedure (SQL Server MERGE: update on match, insert on no match)
+- [x] DTOs
+  - [x] `TransformedCustomer` — intermediate DTO with cleaned fields (externalId, name, email, phone, flattened address, rawData)
+  - [x] `ValidationResult` — wraps valid boolean, TransformedCustomer, and List<String> errors
+- [x] Entities and repositories
+  - [x] `ValidatedCustomer` entity (validated.validated_customers) + `ValidatedCustomerRepository` with `findByExternalId()`
+  - [x] `FinalCustomer` entity ([final].customers) + `FinalCustomerRepository` with `findByExternalId()`
+- [x] `CustomerTransformationService` — parses raw JSON via ObjectMapper, normalizes phone (strip non-digits), email (lowercase+trim), address (flatten to "street, city, state zip"), name (trim)
+- [x] `CustomerValidationService` — stateless validation: external_id required, name required, email format regex (if present), returns all errors
+- [x] `CustomerLoadService` — @Transactional upsert into validated schema (find-or-create by external_id) + EXEC stored procedure for final schema with source_system='CRM'
+- [x] `CustomerPipelineService` — full pipeline orchestrator: stage → transform → validate → load with per-record error isolation (VALIDATION_ERROR / PIPELINE_ERROR)
+- [x] `SyncJobService.getJobEntity()` — returns raw SyncJob entity for pipeline orchestrator
+- [x] `IntegrationController` updated — POST /api/integrations/sync/customers now runs full pipeline via CustomerPipelineService
+- [x] Unit tests (24 new, 36 total passing)
+  - [x] `CustomerTransformationServiceTest` — 8 tests (happy path, null fields, partial address, invalid JSON, mixed-case email, phone formats)
+  - [x] `CustomerValidationServiceTest` — 7 tests (valid, missing fields, invalid email, null email, multiple errors, edge-case emails)
+  - [x] `CustomerLoadServiceTest` — 3 tests (new record, existing record update, JDBC failure propagation)
+  - [x] `CustomerPipelineServiceTest` — 6 tests (all success, staging fails, validation/transform/load failures, empty staging)
+
+**Next Steps (Phase 4: React Dashboard)**:
+1. Build Next.js dashboard with sync monitoring, job history, and error details
+2. Integrate with REST API endpoints for sync job data
+3. Add real-time status updates and data visualization
+
+**Future Phases**:
+- **Phase 4**: React dashboard (Next.js) — sync monitoring, job history, error details
+- **Phase 5**: GraphQL resolvers for real-time dashboard updates (subscriptions)
+- **Phase 6**: SQS async processing via LocalStack — decouple sync triggers from processing
+- **Phase 7**: Additional data sources (ERP, Accounting mock APIs)
+- **Phase 8**: CI/CD with GitHub Actions, integration tests with Testcontainers
 
 ## Key Design Decisions
 

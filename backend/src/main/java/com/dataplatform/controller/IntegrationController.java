@@ -1,7 +1,7 @@
 package com.dataplatform.controller;
 
 import com.dataplatform.dto.SyncJobDTO;
-import com.dataplatform.service.CustomerIntegrationService;
+import com.dataplatform.service.CustomerPipelineService;
 import com.dataplatform.service.SyncJobService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,13 +16,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class IntegrationController {
 
-    private final CustomerIntegrationService customerIntegrationService;
+    private final CustomerPipelineService customerPipelineService;
     private final SyncJobService syncJobService;
 
     @PostMapping("/sync/customers")
     public ResponseEntity<SyncJobDTO> syncCustomers() {
-        log.info("Triggering customer sync");
-        SyncJobDTO result = customerIntegrationService.syncCustomers();
+        log.info("Triggering customer sync pipeline");
+        SyncJobDTO result = customerPipelineService.runFullPipeline();
         return ResponseEntity.ok(result);
     }
 
