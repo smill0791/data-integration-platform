@@ -2,7 +2,7 @@ export interface SyncJob {
   id: number;
   sourceName: string;
   syncType: string;
-  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   startTime: string;
   endTime: string | null;
   recordsProcessed: number;
@@ -64,7 +64,7 @@ export interface GraphQLSyncJob {
   id: string;
   sourceName: string;
   syncType: string;
-  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   startTime: string;
   endTime: string | null;
   recordsProcessed: number;

@@ -7,7 +7,8 @@ export function useSyncJob(id: number) {
     queryKey: ['syncJob', id],
     queryFn: () => getJobById(id),
     refetchInterval: (query) => {
-      return query.state.data?.status === 'RUNNING' ? 5000 : false;
+      const status = query.state.data?.status;
+      return status === 'RUNNING' || status === 'QUEUED' ? 5000 : false;
     },
   });
 }

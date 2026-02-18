@@ -1,8 +1,8 @@
 package com.dataplatform.graphql;
 
 import com.dataplatform.model.SyncJob;
-import com.dataplatform.service.CustomerPipelineService;
 import com.dataplatform.service.SyncJobService;
+import com.dataplatform.service.SyncMessageProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -16,23 +16,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SyncJobMutationResolver {
 
-    private final CustomerPipelineService customerPipelineService;
     private final SyncJobService syncJobService;
+    private final SyncMessageProducer syncMessageProducer;
 
     @MutationMapping
     public SyncJob triggerSync(@Argument Map<String, Object> input) {
         String sourceName = (String) input.getOrDefault("sourceName", "CRM");
         log.info("GraphQL triggerSync requested for source={}", sourceName);
 
-        var result = customerPipelineService.runFullPipeline();
-        return syncJobService.getJobEntity(result.getId());
+        SyncJob job = syncJobService.createQueuedJob(sourceName, "FULL");
+        syncMessageProducer.sendSyncRequest(job.getId(), job.getSourceName(), job.getSyncType());
+        return job;
     }
 
     @MutationMapping
     public SyncJob cancelSync(@Argument Long jobId) {
         log.info("GraphQL cancelSync requested for job={}", jobId);
         SyncJob job = syncJobService.getJobEntity(jobId);
-        if (!"RUNNING".equals(job.getStatus())) {
+        if (!"RUNNING".equals(job.getStatus()) && !"QUEUED".equals(job.getStatus())) {
             return job;
         }
         return syncJobService.failJob(job, "Cancelled via GraphQL");

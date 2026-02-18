@@ -115,6 +115,7 @@ type StagingRecord {
 
 # Sync Status - current state of a sync job
 enum SyncStatus {
+  QUEUED
   RUNNING
   COMPLETED
   FAILED

@@ -16,11 +16,11 @@ export function useGraphQLSyncJob(id: string) {
     variables: { id },
   });
 
-  const isRunning = queryData?.syncJob?.status === 'RUNNING';
+  const isActive = queryData?.syncJob?.status === 'RUNNING' || queryData?.syncJob?.status === 'QUEUED';
 
   const { data: subData } = useSubscription<SubscriptionData>(WATCH_SYNC_JOB, {
     variables: { id },
-    skip: !isRunning,
+    skip: !isActive,
   });
 
   // Merge subscription data over query data for real-time updates

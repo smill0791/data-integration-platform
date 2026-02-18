@@ -37,6 +37,21 @@ spring:
       printer:
         enabled: true
 
+spring.cloud.aws:
+  region:
+    static: us-east-1
+  sqs:
+    endpoint: ${SQS_ENDPOINT:http://localhost:4566}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY:test}
+    secret-key: ${AWS_SECRET_KEY:test}
+
+app:
+  sqs:
+    customer-sync-queue: customer-sync-queue
+    customer-sync-dlq: customer-sync-dlq
+    max-retries: 3
+
 integration:
   crm:
     base-url: ${CRM_API_URL:http://localhost:3001}

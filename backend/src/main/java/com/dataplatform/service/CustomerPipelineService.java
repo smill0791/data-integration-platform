@@ -37,8 +37,22 @@ public class CustomerPipelineService {
             return stagingResult;
         }
 
-        SyncJob job = syncJobService.getJobEntity(stagingResult.getId());
+        return runPipelineForJob(stagingResult.getId());
+    }
+
+    public SyncJobDTO runPipelineForJob(Long jobId) {
+        SyncJob job = syncJobService.getJobEntity(jobId);
+
+        // If job doesn't have staging data yet, run staging first
         List<RawCustomer> rawCustomers = rawCustomerRepository.findBySyncJobId(job.getId());
+        if (rawCustomers.isEmpty() && "RUNNING".equals(job.getStatus())) {
+            SyncJobDTO stagingResult = customerIntegrationService.syncCustomersForJob(job);
+            if ("FAILED".equals(stagingResult.getStatus())) {
+                log.warn("Staging failed for job {}, skipping pipeline", jobId);
+                return stagingResult;
+            }
+            rawCustomers = rawCustomerRepository.findBySyncJobId(job.getId());
+        }
 
         int loaded = 0;
         int failed = 0;
@@ -77,7 +91,7 @@ public class CustomerPipelineService {
         }
 
         syncJobService.completeJob(job, loaded, failed);
-        log.info("Pipeline completed: loaded={}, failed={}", loaded, failed);
+        log.info("Pipeline completed for job {}: loaded={}, failed={}", jobId, loaded, failed);
         return SyncJobDTO.fromEntity(job);
     }
 }

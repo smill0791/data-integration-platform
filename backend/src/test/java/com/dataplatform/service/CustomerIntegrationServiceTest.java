@@ -61,12 +61,15 @@ class CustomerIntegrationServiceTest {
                 .recordsProcessed(0)
                 .recordsFailed(0)
                 .build();
+    }
 
+    private void stubCreateJob() {
         when(syncJobService.createJob("CRM", "FULL")).thenReturn(runningJob);
     }
 
     @Test
-    void syncCustomers_success_shouldProcessAllRecords() {
+    void syncCustomers_success_shouldStageAllRecords() {
+        stubCreateJob();
         List<CrmCustomerResponse> customers = List.of(
                 buildCustomer("CRM-001", "Alice"),
                 buildCustomer("CRM-002", "Bob")
@@ -74,21 +77,16 @@ class CustomerIntegrationServiceTest {
         when(crmApiClient.fetchAllCustomers()).thenReturn(customers);
         when(rawCustomerRepository.save(any(RawCustomer.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
-        when(syncJobService.completeJob(any(), eq(2), eq(0))).thenAnswer(inv -> {
-            runningJob.setStatus("COMPLETED");
-            runningJob.setRecordsProcessed(2);
-            return runningJob;
-        });
 
         SyncJobDTO result = customerIntegrationService.syncCustomers();
 
         verify(rawCustomerRepository, times(2)).save(any(RawCustomer.class));
-        verify(syncJobService).completeJob(runningJob, 2, 0);
         verify(syncErrorRepository, never()).save(any());
     }
 
     @Test
     void syncCustomers_partialFailure_shouldLogErrors() {
+        stubCreateJob();
         List<CrmCustomerResponse> customers = List.of(
                 buildCustomer("CRM-001", "Alice"),
                 buildCustomer("CRM-002", "Bob")
@@ -99,21 +97,15 @@ class CustomerIntegrationServiceTest {
                 .thenThrow(new RuntimeException("DB constraint violation"));
         when(syncErrorRepository.save(any(SyncError.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
-        when(syncJobService.completeJob(any(), eq(1), eq(1))).thenAnswer(inv -> {
-            runningJob.setStatus("COMPLETED");
-            runningJob.setRecordsProcessed(1);
-            runningJob.setRecordsFailed(1);
-            return runningJob;
-        });
 
         SyncJobDTO result = customerIntegrationService.syncCustomers();
 
-        verify(syncJobService).completeJob(runningJob, 1, 1);
         verify(syncErrorRepository).save(any(SyncError.class));
     }
 
     @Test
     void syncCustomers_apiFails_shouldFailJob() {
+        stubCreateJob();
         when(crmApiClient.fetchAllCustomers())
                 .thenThrow(new IntegrationException("Connection refused"));
         when(syncJobService.failJob(any(), anyString())).thenAnswer(inv -> {
@@ -130,16 +122,27 @@ class CustomerIntegrationServiceTest {
 
     @Test
     void syncCustomers_emptyResponse_shouldCompleteWithZero() {
+        stubCreateJob();
         when(crmApiClient.fetchAllCustomers()).thenReturn(Collections.emptyList());
-        when(syncJobService.completeJob(any(), eq(0), eq(0))).thenAnswer(inv -> {
-            runningJob.setStatus("COMPLETED");
-            return runningJob;
-        });
 
         SyncJobDTO result = customerIntegrationService.syncCustomers();
 
-        verify(syncJobService).completeJob(runningJob, 0, 0);
         verify(rawCustomerRepository, never()).save(any());
+    }
+
+    @Test
+    void syncCustomersForJob_shouldUseExistingJob() {
+        List<CrmCustomerResponse> customers = List.of(
+                buildCustomer("CRM-001", "Alice")
+        );
+        when(crmApiClient.fetchAllCustomers()).thenReturn(customers);
+        when(rawCustomerRepository.save(any(RawCustomer.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        SyncJobDTO result = customerIntegrationService.syncCustomersForJob(runningJob);
+
+        verify(syncJobService, never()).createJob(any(), any());
+        verify(rawCustomerRepository).save(any(RawCustomer.class));
     }
 
     private CrmCustomerResponse buildCustomer(String id, String name) {

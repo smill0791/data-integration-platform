@@ -1,9 +1,8 @@
 package com.dataplatform.graphql;
 
-import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.model.SyncJob;
-import com.dataplatform.service.CustomerPipelineService;
 import com.dataplatform.service.SyncJobService;
+import com.dataplatform.service.SyncMessageProducer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,28 +19,25 @@ import static org.mockito.Mockito.*;
 class SyncJobMutationResolverTest {
 
     @Mock
-    private CustomerPipelineService customerPipelineService;
-    @Mock
     private SyncJobService syncJobService;
+    @Mock
+    private SyncMessageProducer syncMessageProducer;
 
     @InjectMocks
     private SyncJobMutationResolver resolver;
 
     @Test
-    void triggerSync_shouldRunPipelineAndReturnEntity() {
-        SyncJobDTO dto = new SyncJobDTO();
-        dto.setId(1L);
-        dto.setStatus("COMPLETED");
+    void triggerSync_shouldCreateQueuedJobAndSendMessage() {
+        SyncJob queuedJob = SyncJob.builder().id(1L).sourceName("CRM").syncType("FULL")
+                .status("QUEUED").startTime(LocalDateTime.now()).build();
 
-        SyncJob entity = SyncJob.builder().id(1L).sourceName("CRM").status("COMPLETED")
-                .startTime(LocalDateTime.now()).build();
-
-        when(customerPipelineService.runFullPipeline()).thenReturn(dto);
-        when(syncJobService.getJobEntity(1L)).thenReturn(entity);
+        when(syncJobService.createQueuedJob("CRM", "FULL")).thenReturn(queuedJob);
 
         SyncJob result = resolver.triggerSync(Map.of("sourceName", "CRM"));
+
         assertThat(result.getId()).isEqualTo(1L);
-        verify(customerPipelineService).runFullPipeline();
+        assertThat(result.getStatus()).isEqualTo("QUEUED");
+        verify(syncMessageProducer).sendSyncRequest(1L, "CRM", "FULL");
     }
 
     @Test
@@ -53,6 +49,20 @@ class SyncJobMutationResolverTest {
 
         when(syncJobService.getJobEntity(1L)).thenReturn(running);
         when(syncJobService.failJob(running, "Cancelled via GraphQL")).thenReturn(cancelled);
+
+        SyncJob result = resolver.cancelSync(1L);
+        assertThat(result.getStatus()).isEqualTo("FAILED");
+    }
+
+    @Test
+    void cancelSync_whenQueued_shouldFailJob() {
+        SyncJob queued = SyncJob.builder().id(1L).status("QUEUED")
+                .startTime(LocalDateTime.now()).build();
+        SyncJob cancelled = SyncJob.builder().id(1L).status("FAILED")
+                .startTime(LocalDateTime.now()).endTime(LocalDateTime.now()).build();
+
+        when(syncJobService.getJobEntity(1L)).thenReturn(queued);
+        when(syncJobService.failJob(queued, "Cancelled via GraphQL")).thenReturn(cancelled);
 
         SyncJob result = resolver.cancelSync(1L);
         assertThat(result.getStatus()).isEqualTo("FAILED");

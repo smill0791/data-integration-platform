@@ -7,8 +7,8 @@ export function useSyncJobs() {
     queryKey: ['syncJobs'],
     queryFn: getRecentJobs,
     refetchInterval: (query) => {
-      const hasRunning = query.state.data?.some((job) => job.status === 'RUNNING') ?? false;
-      return hasRunning ? 5000 : false;
+      const hasActive = query.state.data?.some((job) => job.status === 'RUNNING' || job.status === 'QUEUED') ?? false;
+      return hasActive ? 5000 : false;
     },
   });
 }

@@ -28,7 +28,10 @@ public class CustomerIntegrationService {
 
     public SyncJobDTO syncCustomers() {
         SyncJob job = syncJobService.createJob("CRM", "FULL");
+        return syncCustomersForJob(job);
+    }
 
+    public SyncJobDTO syncCustomersForJob(SyncJob job) {
         List<CrmCustomerResponse> customers;
         try {
             customers = crmApiClient.fetchAllCustomers();
@@ -68,8 +71,7 @@ public class CustomerIntegrationService {
             }
         }
 
-        syncJobService.completeJob(job, processed, failed);
-        log.info("Customer sync completed: processed={}, failed={}", processed, failed);
+        log.info("Customer staging completed for job {}: processed={}, failed={}", job.getId(), processed, failed);
         return SyncJobDTO.fromEntity(job);
     }
 }

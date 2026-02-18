@@ -390,8 +390,41 @@ CREATE TABLE final.orders (...);
 - [x] `reactor-test` dependency added to pom.xml for Flux testing
 - [x] `start-dev.sh` improved — auto-kills stale processes on ports 3000/3001/8080, removed `set -e`
 
+**Phase 6: SQS Async Processing via LocalStack** (Complete)
+- [x] AWS SQS integration via Spring Cloud AWS
+  - [x] `spring-cloud-aws-starter-sqs` dependency with BOM version management
+  - [x] `SqsConfig` — SQS client bean with LocalStack endpoint, auto-creates queues + DLQ with redrive policy
+  - [x] `SyncMessage` DTO — jobId, sourceName, syncType for queue messages
+  - [x] `SyncMessageProducer` — serializes and sends sync requests to SQS queue
+  - [x] `SyncMessageConsumer` — `@SqsListener` that deserializes messages, transitions QUEUED→RUNNING, runs pipeline
+- [x] Async job lifecycle
+  - [x] `QUEUED` status added to SyncJob model and GraphQL `SyncStatus` enum
+  - [x] `SyncJobService.createQueuedJob()` — creates job with QUEUED status
+  - [x] `SyncJobService.startJob()` — transitions QUEUED→RUNNING with event publishing
+  - [x] `CustomerPipelineService.runPipelineForJob(jobId)` — extracted method for async consumer
+  - [x] `CustomerIntegrationService.syncCustomersForJob(job)` — staging with existing job
+- [x] Entry points refactored to async
+  - [x] `POST /api/integrations/sync/customers` — returns 202 Accepted with QUEUED job
+  - [x] GraphQL `triggerSync` mutation — returns QUEUED job immediately
+  - [x] GraphQL `cancelSync` — handles QUEUED status (cancellable)
+- [x] Frontend updates
+  - [x] `StatusBadge` — QUEUED status with gray/pulse styling
+  - [x] TypeScript types — QUEUED added to status unions
+  - [x] Polling hooks — poll on QUEUED and RUNNING statuses
+  - [x] GraphQL subscription — active for QUEUED and RUNNING jobs
+- [x] Infrastructure
+  - [x] LocalStack init script (`localstack/init-scripts/01-create-queues.sh`) — creates queue + DLQ on startup
+  - [x] `docker-compose.yml` — mounts init script volume for LocalStack
+  - [x] `application-test.yml` — disables SQS for unit tests with mock SqsClient bean
+  - [x] `@ConditionalOnProperty` on SqsConfig and SyncMessageConsumer for test isolation
+- [x] Tests (10 new, 65 total passing)
+  - [x] `SyncMessageProducerTest` — 2 tests (serialize+send, SQS failure)
+  - [x] `SyncMessageConsumerTest` — 3 tests (success, pipeline failure, invalid JSON)
+  - [x] `SyncJobServiceTest` — +3 tests (createQueuedJob, startJob, startJob not found)
+  - [x] `SyncJobMutationResolverTest` — rewritten for async (4 tests: trigger queued, cancel running/queued/completed)
+  - [x] `CustomerIntegrationServiceTest` — updated + 1 new test (syncCustomersForJob)
+
 **Future Phases**:
-- **Phase 6**: SQS async processing via LocalStack — decouple sync triggers from processing
 - **Phase 7**: Additional data sources (ERP, Accounting mock APIs)
 - **Phase 8**: CI/CD with GitHub Actions, integration tests with Testcontainers
 

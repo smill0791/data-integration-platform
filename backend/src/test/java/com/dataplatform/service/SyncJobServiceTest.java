@@ -169,6 +169,44 @@ class SyncJobServiceTest {
     }
 
     @Test
+    void createQueuedJob_shouldCreateJobWithQueuedStatus() {
+        when(syncJobRepository.save(any(SyncJob.class))).thenAnswer(inv -> {
+            SyncJob job = inv.getArgument(0);
+            job.setId(2L);
+            return job;
+        });
+
+        SyncJob result = syncJobService.createQueuedJob("CRM", "FULL");
+
+        assertThat(result.getSourceName()).isEqualTo("CRM");
+        assertThat(result.getSyncType()).isEqualTo("FULL");
+        assertThat(result.getStatus()).isEqualTo("QUEUED");
+        verify(eventPublisher).publish(any(SyncJob.class));
+    }
+
+    @Test
+    void startJob_shouldTransitionToRunning() {
+        sampleJob.setStatus("QUEUED");
+        when(syncJobRepository.findById(1L)).thenReturn(Optional.of(sampleJob));
+        when(syncJobRepository.save(any(SyncJob.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        SyncJob result = syncJobService.startJob(1L);
+
+        assertThat(result.getStatus()).isEqualTo("RUNNING");
+        assertThat(result.getStartTime()).isNotNull();
+        verify(eventPublisher).publish(any(SyncJob.class));
+    }
+
+    @Test
+    void startJob_whenNotFound_shouldThrow() {
+        when(syncJobRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> syncJobService.startJob(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+    }
+
+    @Test
     void createJob_shouldPublishEvent() {
         when(syncJobRepository.save(any(SyncJob.class))).thenAnswer(inv -> {
             SyncJob job = inv.getArgument(0);

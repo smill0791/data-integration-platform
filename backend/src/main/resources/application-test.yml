@@ -19,6 +19,27 @@ spring:
     graphiql:
       enabled: false
 
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      sqs:
+        endpoint: http://localhost:4566
+      credentials:
+        access-key: test
+        secret-key: test
+
+  autoconfigure:
+    exclude:
+      - io.awspring.cloud.autoconfigure.sqs.SqsAutoConfiguration
+
+app:
+  sqs:
+    enabled: false
+    customer-sync-queue: customer-sync-queue
+    customer-sync-dlq: customer-sync-dlq
+    max-retries: 3
+
 integration:
   crm:
     base-url: http://localhost:3001

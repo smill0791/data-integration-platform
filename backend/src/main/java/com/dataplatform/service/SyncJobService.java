@@ -62,6 +62,32 @@ public class SyncJobService {
         return saved;
     }
 
+    @Transactional
+    public SyncJob createQueuedJob(String sourceName, String syncType) {
+        SyncJob job = SyncJob.builder()
+                .sourceName(sourceName)
+                .syncType(syncType)
+                .status("QUEUED")
+                .startTime(LocalDateTime.now())
+                .build();
+        SyncJob saved = syncJobRepository.save(job);
+        log.info("Created queued sync job {} for source={} type={}", saved.getId(), sourceName, syncType);
+        eventPublisher.publish(saved);
+        return saved;
+    }
+
+    @Transactional
+    public SyncJob startJob(Long jobId) {
+        SyncJob job = syncJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + jobId));
+        job.setStatus("RUNNING");
+        job.setStartTime(LocalDateTime.now());
+        SyncJob saved = syncJobRepository.save(job);
+        log.info("Started sync job {}", saved.getId());
+        eventPublisher.publish(saved);
+        return saved;
+    }
+
     public SyncJobDTO getJobById(Long id) {
         SyncJob job = syncJobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + id));
