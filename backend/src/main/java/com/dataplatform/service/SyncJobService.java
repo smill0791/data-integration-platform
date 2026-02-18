@@ -1,8 +1,10 @@
 package com.dataplatform.service;
 
+import com.dataplatform.dto.SyncErrorDTO;
 import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.exception.ResourceNotFoundException;
 import com.dataplatform.model.SyncJob;
+import com.dataplatform.repository.SyncErrorRepository;
 import com.dataplatform.repository.SyncJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ import java.util.List;
 public class SyncJobService {
 
     private final SyncJobRepository syncJobRepository;
+    private final SyncErrorRepository syncErrorRepository;
 
     @Transactional
     public SyncJob createJob(String sourceName, String syncType) {
@@ -69,6 +72,15 @@ public class SyncJobService {
         return syncJobRepository.findTop20ByOrderByStartTimeDesc()
                 .stream()
                 .map(SyncJobDTO::fromEntity)
+                .toList();
+    }
+
+    public List<SyncErrorDTO> getErrorsForJob(Long jobId) {
+        syncJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + jobId));
+        return syncErrorRepository.findBySyncJobIdOrderByOccurredAtDesc(jobId)
+                .stream()
+                .map(SyncErrorDTO::fromEntity)
                 .toList();
     }
 }

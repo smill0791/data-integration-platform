@@ -1,8 +1,11 @@
 package com.dataplatform.service;
 
+import com.dataplatform.dto.SyncErrorDTO;
 import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.exception.ResourceNotFoundException;
+import com.dataplatform.model.SyncError;
 import com.dataplatform.model.SyncJob;
+import com.dataplatform.repository.SyncErrorRepository;
 import com.dataplatform.repository.SyncJobRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,9 @@ class SyncJobServiceTest {
 
     @Mock
     private SyncJobRepository syncJobRepository;
+
+    @Mock
+    private SyncErrorRepository syncErrorRepository;
 
     @InjectMocks
     private SyncJobService syncJobService;
@@ -124,5 +130,37 @@ class SyncJobServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSourceName()).isEqualTo("CRM");
+    }
+
+    @Test
+    void getErrorsForJob_whenJobExists_shouldReturnMappedDTOs() {
+        when(syncJobRepository.findById(1L)).thenReturn(Optional.of(sampleJob));
+
+        SyncError error = SyncError.builder()
+                .id(10L)
+                .syncJob(sampleJob)
+                .errorType("VALIDATION_ERROR")
+                .errorMessage("Missing required field: name")
+                .failedRecord("{\"id\": \"ext-1\"}")
+                .occurredAt(LocalDateTime.now())
+                .build();
+        when(syncErrorRepository.findBySyncJobIdOrderByOccurredAtDesc(1L))
+                .thenReturn(List.of(error));
+
+        List<SyncErrorDTO> result = syncJobService.getErrorsForJob(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getErrorType()).isEqualTo("VALIDATION_ERROR");
+        assertThat(result.get(0).getErrorMessage()).isEqualTo("Missing required field: name");
+        assertThat(result.get(0).getFailedRecord()).isEqualTo("{\"id\": \"ext-1\"}");
+    }
+
+    @Test
+    void getErrorsForJob_whenJobNotFound_shouldThrow() {
+        when(syncJobRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> syncJobService.getErrorsForJob(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
     }
 }

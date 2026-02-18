@@ -1,5 +1,6 @@
 package com.dataplatform.controller;
 
+import com.dataplatform.dto.SyncErrorDTO;
 import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.service.CustomerPipelineService;
 import com.dataplatform.service.SyncJobService;
@@ -34,5 +35,10 @@ public class IntegrationController {
     @GetMapping("/jobs/{id}")
     public ResponseEntity<SyncJobDTO> getJob(@PathVariable Long id) {
         return ResponseEntity.ok(syncJobService.getJobById(id));
+    }
+
+    @GetMapping("/jobs/{id}/errors")
+    public ResponseEntity<List<SyncErrorDTO>> getJobErrors(@PathVariable Long id) {
+        return ResponseEntity.ok(syncJobService.getErrorsForJob(id));
     }
 }
