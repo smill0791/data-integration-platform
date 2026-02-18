@@ -337,13 +337,38 @@ CREATE TABLE final.orders (...);
   - [x] `CustomerLoadServiceTest` — 3 tests (new record, existing record update, JDBC failure propagation)
   - [x] `CustomerPipelineServiceTest` — 6 tests (all success, staging fails, validation/transform/load failures, empty staging)
 
-**Next Steps (Phase 4: React Dashboard)**:
-1. Build Next.js dashboard with sync monitoring, job history, and error details
-2. Integrate with REST API endpoints for sync job data
-3. Add real-time status updates and data visualization
+**Phase 4: React Dashboard** (Complete)
+- [x] Backend sync errors endpoint
+  - [x] `SyncErrorDTO` — DTO with `fromEntity()` mapping
+  - [x] `SyncJobService.getErrorsForJob()` — validates job exists (404), returns mapped errors
+  - [x] `GET /api/integrations/jobs/{id}/errors` — new controller endpoint
+  - [x] Unit tests (2 new, 38 total passing)
+- [x] Frontend infrastructure
+  - [x] `next.config.js`, `tsconfig.json`, `tailwind.config.js`, `postcss.config.js`
+  - [x] `.env.local.example` documenting `NEXT_PUBLIC_API_URL`
+  - [x] `globals.css` (Tailwind directives), `providers.tsx` (React Query + Apollo), `layout.tsx`
+- [x] Data layer
+  - [x] `types/syncJob.ts` — SyncJob, SyncError, DashboardMetrics, DailyStatPoint interfaces
+  - [x] `services/syncJobService.ts` — fetch wrappers for all 4 API calls
+- [x] Custom hooks
+  - [x] `useSyncJobs` — polls every 5s only when a RUNNING job exists
+  - [x] `useSyncJob(id)` — polls every 5s while job is RUNNING
+  - [x] `useSyncErrors(jobId)` — no polling (errors are immutable)
+  - [x] `useTriggerSync` — mutation with `invalidateQueries` on success
+  - [x] `useDashboardMetrics(jobs)` — client-side computation of 24h/30d metrics + daily chart data
+- [x] Components
+  - [x] `StatusBadge` — colored pill with pulse animation for RUNNING
+  - [x] `MetricCard`, `LoadingSpinner`, `ErrorAlert` — shared atoms
+  - [x] `SyncJobTable` — sortable table with row links to job detail
+  - [x] `TriggerSyncButton` — self-contained with loading and error state
+  - [x] `SyncMetricsChart` — Recharts BarChart with completed/failed series
+  - [x] `SyncJobDetails` — job summary grid + error log table
+- [x] Pages
+  - [x] `app/page.tsx` — dashboard with metric cards, chart, job table
+  - [x] `app/jobs/[id]/page.tsx` — job detail with auto-polling while RUNNING
+- [x] `start-dev.sh` — single script to start backend, mock API, and frontend together
 
 **Future Phases**:
-- **Phase 4**: React dashboard (Next.js) — sync monitoring, job history, error details
 - **Phase 5**: GraphQL resolvers for real-time dashboard updates (subscriptions)
 - **Phase 6**: SQS async processing via LocalStack — decouple sync triggers from processing
 - **Phase 7**: Additional data sources (ERP, Accounting mock APIs)
