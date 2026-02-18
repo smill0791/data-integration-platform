@@ -3,6 +3,7 @@ package com.dataplatform.service;
 import com.dataplatform.dto.SyncErrorDTO;
 import com.dataplatform.dto.SyncJobDTO;
 import com.dataplatform.exception.ResourceNotFoundException;
+import com.dataplatform.graphql.SyncJobEventPublisher;
 import com.dataplatform.model.SyncError;
 import com.dataplatform.model.SyncJob;
 import com.dataplatform.repository.SyncErrorRepository;
@@ -32,6 +33,9 @@ class SyncJobServiceTest {
 
     @Mock
     private SyncErrorRepository syncErrorRepository;
+
+    @Mock
+    private SyncJobEventPublisher eventPublisher;
 
     @InjectMocks
     private SyncJobService syncJobService;
@@ -162,5 +166,18 @@ class SyncJobServiceTest {
         assertThatThrownBy(() -> syncJobService.getErrorsForJob(99L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("99");
+    }
+
+    @Test
+    void createJob_shouldPublishEvent() {
+        when(syncJobRepository.save(any(SyncJob.class))).thenAnswer(inv -> {
+            SyncJob job = inv.getArgument(0);
+            job.setId(1L);
+            return job;
+        });
+
+        syncJobService.createJob("CRM", "FULL");
+
+        verify(eventPublisher).publish(any(SyncJob.class));
     }
 }

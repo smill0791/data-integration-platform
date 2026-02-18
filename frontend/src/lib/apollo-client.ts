@@ -51,10 +51,9 @@ export const apolloClient = new ApolloClient({
         fields: {
           // Configure cache policies for specific fields
           syncJobs: {
-            // Merge strategy for paginated queries
             keyArgs: ['filter', 'orderBy'],
-            merge(existing = [], incoming) {
-              return [...existing, ...incoming];
+            merge(_existing, incoming) {
+              return incoming;
             },
           },
         },

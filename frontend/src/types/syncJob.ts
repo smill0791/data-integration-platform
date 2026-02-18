@@ -30,3 +30,47 @@ export interface DailyStatPoint {
   syncsCompleted: number;
   syncsFailed: number;
 }
+
+// GraphQL-specific types
+
+export interface ValidationStats {
+  totalRecords: number;
+  passedValidation: number;
+  failedValidation: number;
+  topErrors: { errorType: string; count: number }[];
+}
+
+export interface StagingRecord {
+  id: string;
+  externalId: string | null;
+  rawData: string;
+  receivedAt: string;
+}
+
+export interface MetricsSummary {
+  totalSyncs: number;
+  successRate: number;
+  avgDuration: number;
+  totalRecords: number;
+  dailyStats: DailyStatPoint[];
+}
+
+export interface SyncMetrics {
+  last24Hours: MetricsSummary;
+  last30Days: MetricsSummary;
+}
+
+export interface GraphQLSyncJob {
+  id: string;
+  sourceName: string;
+  syncType: string;
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  startTime: string;
+  endTime: string | null;
+  recordsProcessed: number;
+  recordsFailed: number;
+  duration: number | null;
+  successRate: number | null;
+  errors?: SyncError[];
+  validationStats?: ValidationStats;
+}

@@ -1,18 +1,18 @@
 'use client';
 
-import { useTriggerSync } from '@/hooks/useTriggerSync';
+import { useGraphQLTriggerSync } from '@/hooks/useGraphQLTriggerSync';
 
 export default function TriggerSyncButton() {
-  const { mutate, isPending, error } = useTriggerSync();
+  const { triggerSync, loading, error } = useGraphQLTriggerSync();
 
   return (
     <div>
       <button
-        onClick={() => mutate()}
-        disabled={isPending}
+        onClick={() => triggerSync()}
+        disabled={loading}
         className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
-        {isPending ? (
+        {loading ? (
           <>
             <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
