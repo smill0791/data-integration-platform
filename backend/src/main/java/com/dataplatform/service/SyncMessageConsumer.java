@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 public class SyncMessageConsumer {
 
     private final CustomerPipelineService customerPipelineService;
+    private final ProductPipelineService productPipelineService;
+    private final InvoicePipelineService invoicePipelineService;
     private final SyncJobService syncJobService;
     private final ObjectMapper objectMapper;
 
@@ -26,7 +28,7 @@ public class SyncMessageConsumer {
             log.info("Received sync message from SQS: jobId={}, source={}", message.getJobId(), message.getSourceName());
 
             syncJobService.startJob(message.getJobId());
-            customerPipelineService.runPipelineForJob(message.getJobId());
+            routePipeline(message);
 
             log.info("Successfully processed sync message for job {}", message.getJobId());
         } catch (Exception e) {
@@ -40,6 +42,14 @@ public class SyncMessageConsumer {
                 }
             }
             throw new RuntimeException("SQS message processing failed", e);
+        }
+    }
+
+    private void routePipeline(SyncMessage message) {
+        switch (message.getSourceName()) {
+            case "ERP" -> productPipelineService.runPipelineForJob(message.getJobId());
+            case "ACCOUNTING" -> invoicePipelineService.runPipelineForJob(message.getJobId());
+            default -> customerPipelineService.runPipelineForJob(message.getJobId());
         }
     }
 }

@@ -57,6 +57,14 @@ integration:
     base-url: ${CRM_API_URL:http://localhost:3001}
     page-size: ${CRM_PAGE_SIZE:20}
     max-retries: ${CRM_MAX_RETRIES:3}
+  erp:
+    base-url: ${ERP_API_URL:http://localhost:3002}
+    page-size: ${ERP_PAGE_SIZE:20}
+    max-retries: ${ERP_MAX_RETRIES:3}
+  accounting:
+    base-url: ${ACCOUNTING_API_URL:http://localhost:3003}
+    page-size: ${ACCOUNTING_PAGE_SIZE:20}
+    max-retries: ${ACCOUNTING_MAX_RETRIES:3}
 
 logging:
   level:

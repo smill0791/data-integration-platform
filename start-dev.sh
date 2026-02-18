@@ -15,7 +15,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # Kill any stale processes on our ports before starting
-for port in 3000 3001 8080; do
+for port in 3000 3001 3002 3003 8080; do
   pid=$(lsof -ti :"$port" 2>/dev/null)
   if [ -n "$pid" ]; then
     echo "Killing stale process on port $port (PID $pid)..."
@@ -30,13 +30,25 @@ cd "$ROOT_DIR/mock-apis/crm-api"
 npm start &
 PIDS+=($!)
 
-# 2. Spring Boot backend (port 8080)
+# 2. Mock ERP API (port 3002)
+echo "Starting Mock ERP API..."
+cd "$ROOT_DIR/mock-apis/erp-api"
+npm start &
+PIDS+=($!)
+
+# 3. Mock Accounting API (port 3003)
+echo "Starting Mock Accounting API..."
+cd "$ROOT_DIR/mock-apis/accounting-api"
+npm start &
+PIDS+=($!)
+
+# 4. Spring Boot backend (port 8080)
 echo "Starting Spring Boot backend..."
 cd "$ROOT_DIR/backend"
 ./mvnw spring-boot:run &
 PIDS+=($!)
 
-# 3. Next.js frontend (port 3000)
+# 5. Next.js frontend (port 3000)
 echo "Starting Next.js frontend..."
 cd "$ROOT_DIR/frontend"
 npm run dev &
@@ -44,10 +56,12 @@ PIDS+=($!)
 
 echo ""
 echo "Services starting (may take 30-60s for backend):"
-echo "  Frontend:  http://localhost:3000"
-echo "  Backend:   http://localhost:8080"
-echo "  GraphiQL:  http://localhost:8080/graphiql"
-echo "  Mock API:  http://localhost:3001"
+echo "  Frontend:     http://localhost:3000"
+echo "  Backend:      http://localhost:8080"
+echo "  GraphiQL:     http://localhost:8080/graphiql"
+echo "  Mock CRM:     http://localhost:3001"
+echo "  Mock ERP:     http://localhost:3002"
+echo "  Mock Acct:    http://localhost:3003"
 echo ""
 echo "Press Ctrl+C to stop all services."
 

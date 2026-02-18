@@ -424,8 +424,41 @@ CREATE TABLE final.orders (...);
   - [x] `SyncJobMutationResolverTest` — rewritten for async (4 tests: trigger queued, cancel running/queued/completed)
   - [x] `CustomerIntegrationServiceTest` — updated + 1 new test (syncCustomersForJob)
 
+**Phase 7: Additional Data Sources (ERP & Accounting)** (Complete)
+- [x] Database migrations
+  - [x] `V3__erp_tables_and_procedure.sql` — `staging.raw_products`, `validated.validated_products`, `[final].products` + `[final].upsert_products` MERGE
+  - [x] `V4__accounting_tables_and_procedure.sql` — `staging.raw_invoices`, `validated.validated_invoices`, `[final].invoices` + `[final].upsert_invoices` MERGE
+- [x] Mock APIs
+  - [x] `mock-apis/erp-api/` (port 3002) — 80 fake products, paginated, delay + 5% failure
+  - [x] `mock-apis/accounting-api/` (port 3003) — 60 fake invoices with line items, paginated, delay + 5% failure
+- [x] ERP Backend Pipeline (13 new files)
+  - [x] `ErpProductResponse`, `TransformedProduct` DTOs
+  - [x] `RawProduct`, `ValidatedProduct`, `FinalProduct` entities + repositories
+  - [x] `ErpApiClient` — paginated fetch with retry (`integration.erp.*`)
+  - [x] `ProductTransformationService` — SKU→uppercase, quantity clamp ≥0
+  - [x] `ProductValidationService` — external_id, sku, name required, price ≥0
+  - [x] `ProductLoadService`, `ProductIntegrationService`, `ProductPipelineService`
+- [x] Accounting Backend Pipeline (13 new files)
+  - [x] `AccountingInvoiceResponse`, `TransformedInvoice` DTOs
+  - [x] `RawInvoice`, `ValidatedInvoice`, `FinalInvoice` entities + repositories
+  - [x] `AccountingApiClient` — paginated fetch with retry (`integration.accounting.*`)
+  - [x] `InvoiceTransformationService` — status→lowercase, currency→uppercase, dueDate→LocalDate.parse
+  - [x] `InvoiceValidationService` — external_id, invoiceNumber, customerName, currency required, amount≥0, status∈{paid,pending,overdue}
+  - [x] `InvoiceLoadService`, `InvoiceIntegrationService`, `InvoicePipelineService`
+- [x] Shared infrastructure updates
+  - [x] `SyncMessageConsumer` — multi-source routing by `sourceName` (CRM/ERP/ACCOUNTING)
+  - [x] `IntegrationController` — `POST /api/integrations/sync/products`, `POST /api/integrations/sync/invoices`
+  - [x] `application.yml` + `application-test.yml` — ERP and Accounting config blocks
+  - [x] `SyncJobQueryResolver` — multi-source `stagingRecords` dispatch via `StagingRecordDTO`
+- [x] Unit tests (62 new, 127 total passing)
+- [x] Frontend updates
+  - [x] `SourceSyncPanel` — three sync buttons (CRM/ERP/Accounting) replacing TriggerSyncButton
+  - [x] `useGraphQLTriggerSync` — accepts `sourceName` parameter
+  - [x] `SyncJobTable` — color-coded source badges
+  - [x] `app/page.tsx` — source filter pills + SourceSyncPanel
+- [x] `start-dev.sh` — ports 3002/3003 added, starts all 5 services
+
 **Future Phases**:
-- **Phase 7**: Additional data sources (ERP, Accounting mock APIs)
 - **Phase 8**: CI/CD with GitHub Actions, integration tests with Testcontainers
 
 ## Key Design Decisions

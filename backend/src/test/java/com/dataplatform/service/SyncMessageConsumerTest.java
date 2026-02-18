@@ -21,48 +21,65 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SyncMessageConsumerTest {
 
-    @Mock
-    private CustomerPipelineService customerPipelineService;
-
-    @Mock
-    private SyncJobService syncJobService;
-
-    @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
+    @Mock private CustomerPipelineService customerPipelineService;
+    @Mock private ProductPipelineService productPipelineService;
+    @Mock private InvoicePipelineService invoicePipelineService;
+    @Mock private SyncJobService syncJobService;
+    @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private SyncMessageConsumer consumer;
 
     @Test
-    void handleSyncMessage_shouldDeserializeAndRunPipeline() throws Exception {
-        SyncMessage message = SyncMessage.builder()
-                .jobId(1L).sourceName("CRM").syncType("FULL").build();
+    void handleSyncMessage_crmSource_shouldRouteToCustomerPipeline() throws Exception {
+        SyncMessage message = SyncMessage.builder().jobId(1L).sourceName("CRM").syncType("FULL").build();
         String json = objectMapper.writeValueAsString(message);
-
-        SyncJob startedJob = SyncJob.builder().id(1L).status("RUNNING")
-                .startTime(LocalDateTime.now()).build();
-        when(syncJobService.startJob(1L)).thenReturn(startedJob);
-        when(customerPipelineService.runPipelineForJob(1L))
-                .thenReturn(SyncJobDTO.builder().id(1L).status("COMPLETED").build());
+        when(syncJobService.startJob(1L)).thenReturn(SyncJob.builder().id(1L).status("RUNNING").startTime(LocalDateTime.now()).build());
+        when(customerPipelineService.runPipelineForJob(1L)).thenReturn(SyncJobDTO.builder().id(1L).status("COMPLETED").build());
 
         consumer.handleSyncMessage(json);
 
-        verify(syncJobService).startJob(1L);
         verify(customerPipelineService).runPipelineForJob(1L);
+        verify(productPipelineService, never()).runPipelineForJob(any());
+        verify(invoicePipelineService, never()).runPipelineForJob(any());
+    }
+
+    @Test
+    void handleSyncMessage_erpSource_shouldRouteToProductPipeline() throws Exception {
+        SyncMessage message = SyncMessage.builder().jobId(2L).sourceName("ERP").syncType("FULL").build();
+        String json = objectMapper.writeValueAsString(message);
+        when(syncJobService.startJob(2L)).thenReturn(SyncJob.builder().id(2L).status("RUNNING").startTime(LocalDateTime.now()).build());
+        when(productPipelineService.runPipelineForJob(2L)).thenReturn(SyncJobDTO.builder().id(2L).status("COMPLETED").build());
+
+        consumer.handleSyncMessage(json);
+
+        verify(productPipelineService).runPipelineForJob(2L);
+        verify(customerPipelineService, never()).runPipelineForJob(any());
+        verify(invoicePipelineService, never()).runPipelineForJob(any());
+    }
+
+    @Test
+    void handleSyncMessage_accountingSource_shouldRouteToInvoicePipeline() throws Exception {
+        SyncMessage message = SyncMessage.builder().jobId(3L).sourceName("ACCOUNTING").syncType("FULL").build();
+        String json = objectMapper.writeValueAsString(message);
+        when(syncJobService.startJob(3L)).thenReturn(SyncJob.builder().id(3L).status("RUNNING").startTime(LocalDateTime.now()).build());
+        when(invoicePipelineService.runPipelineForJob(3L)).thenReturn(SyncJobDTO.builder().id(3L).status("COMPLETED").build());
+
+        consumer.handleSyncMessage(json);
+
+        verify(invoicePipelineService).runPipelineForJob(3L);
+        verify(customerPipelineService, never()).runPipelineForJob(any());
+        verify(productPipelineService, never()).runPipelineForJob(any());
     }
 
     @Test
     void handleSyncMessage_whenPipelineFails_shouldFailJobAndRethrow() throws Exception {
-        SyncMessage message = SyncMessage.builder()
-                .jobId(2L).sourceName("CRM").syncType("FULL").build();
+        SyncMessage message = SyncMessage.builder().jobId(4L).sourceName("CRM").syncType("FULL").build();
         String json = objectMapper.writeValueAsString(message);
-
-        SyncJob startedJob = SyncJob.builder().id(2L).status("RUNNING")
-                .startTime(LocalDateTime.now()).build();
-        when(syncJobService.startJob(2L)).thenReturn(startedJob);
-        when(customerPipelineService.runPipelineForJob(2L))
-                .thenThrow(new RuntimeException("Pipeline exploded"));
-        when(syncJobService.getJobEntity(2L)).thenReturn(startedJob);
+        SyncJob startedJob = SyncJob.builder().id(4L).status("RUNNING").startTime(LocalDateTime.now()).build();
+        when(syncJobService.startJob(4L)).thenReturn(startedJob);
+        when(customerPipelineService.runPipelineForJob(4L)).thenThrow(new RuntimeException("Pipeline exploded"));
+        when(syncJobService.getJobEntity(4L)).thenReturn(startedJob);
         when(syncJobService.failJob(any(), any())).thenReturn(startedJob);
 
         assertThatThrownBy(() -> consumer.handleSyncMessage(json))

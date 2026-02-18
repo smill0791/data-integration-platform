@@ -1,11 +1,7 @@
 package com.dataplatform.graphql;
 
-import com.dataplatform.model.RawCustomer;
-import com.dataplatform.model.SyncError;
-import com.dataplatform.model.SyncJob;
-import com.dataplatform.repository.RawCustomerRepository;
-import com.dataplatform.repository.SyncErrorRepository;
-import com.dataplatform.repository.SyncJobRepository;
+import com.dataplatform.model.*;
+import com.dataplatform.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -23,6 +19,8 @@ public class SyncJobQueryResolver {
     private final SyncJobRepository syncJobRepository;
     private final SyncErrorRepository syncErrorRepository;
     private final RawCustomerRepository rawCustomerRepository;
+    private final RawProductRepository rawProductRepository;
+    private final RawInvoiceRepository rawInvoiceRepository;
 
     @QueryMapping
     public SyncJob syncJob(@Argument Long id) {
@@ -106,7 +104,7 @@ public class SyncJobQueryResolver {
     }
 
     @SchemaMapping(typeName = "StagingRecord", field = "receivedAt")
-    public OffsetDateTime receivedAt(RawCustomer record) {
+    public OffsetDateTime receivedAt(com.dataplatform.dto.StagingRecordDTO record) {
         return record.getReceivedAt() != null
                 ? record.getReceivedAt().atZone(ZoneId.systemDefault()).toOffsetDateTime()
                 : null;
@@ -133,9 +131,22 @@ public class SyncJobQueryResolver {
     }
 
     @SchemaMapping(typeName = "SyncJob", field = "stagingRecords")
-    public List<RawCustomer> stagingRecords(SyncJob job, @Argument Integer limit) {
-        List<RawCustomer> records = rawCustomerRepository.findBySyncJobId(job.getId());
+    public List<com.dataplatform.dto.StagingRecordDTO> stagingRecords(SyncJob job, @Argument Integer limit) {
         int effectiveLimit = limit != null ? limit : 10;
+        List<com.dataplatform.dto.StagingRecordDTO> records;
+
+        switch (job.getSourceName() != null ? job.getSourceName() : "") {
+            case "ERP" -> records = rawProductRepository.findBySyncJobId(job.getId()).stream()
+                    .map(com.dataplatform.dto.StagingRecordDTO::fromRawProduct)
+                    .collect(Collectors.toList());
+            case "ACCOUNTING" -> records = rawInvoiceRepository.findBySyncJobId(job.getId()).stream()
+                    .map(com.dataplatform.dto.StagingRecordDTO::fromRawInvoice)
+                    .collect(Collectors.toList());
+            default -> records = rawCustomerRepository.findBySyncJobId(job.getId()).stream()
+                    .map(com.dataplatform.dto.StagingRecordDTO::fromRawCustomer)
+                    .collect(Collectors.toList());
+        }
+
         return records.stream().limit(effectiveLimit).collect(Collectors.toList());
     }
 

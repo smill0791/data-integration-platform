@@ -4,6 +4,21 @@ import Link from 'next/link';
 import { SyncJob } from '@/types/syncJob';
 import StatusBadge from './StatusBadge';
 
+const sourceStyles: Record<string, string> = {
+  CRM: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+  ERP: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  ACCOUNTING: 'bg-purple-50 text-purple-700 ring-purple-600/20',
+};
+
+function SourceBadge({ source }: { source: string }) {
+  const style = sourceStyles[source] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${style}`}>
+      {source}
+    </span>
+  );
+}
+
 function formatDuration(start: string, end: string | null): string {
   if (!end) return '...';
   const ms = new Date(end).getTime() - new Date(start).getTime();
@@ -43,8 +58,8 @@ export default function SyncJobTable({ jobs }: { jobs: SyncJob[] }) {
           {jobs.map((job) => (
             <tr key={job.id} className="hover:bg-gray-50">
               <td className="whitespace-nowrap px-6 py-4">
-                <Link href={`/jobs/${job.id}`} className="text-blue-600 hover:underline">
-                  {job.sourceName}
+                <Link href={`/jobs/${job.id}`} className="inline-flex items-center gap-2 hover:underline">
+                  <SourceBadge source={job.sourceName} />
                 </Link>
               </td>
               <td className="whitespace-nowrap px-6 py-4">

@@ -32,6 +32,22 @@ public class IntegrationController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
     }
 
+    @PostMapping("/sync/products")
+    public ResponseEntity<SyncJobDTO> syncProducts() {
+        log.info("Triggering async product sync pipeline");
+        SyncJob job = syncJobService.createQueuedJob("ERP", "FULL");
+        syncMessageProducer.sendSyncRequest(job.getId(), job.getSourceName(), job.getSyncType());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
+    }
+
+    @PostMapping("/sync/invoices")
+    public ResponseEntity<SyncJobDTO> syncInvoices() {
+        log.info("Triggering async invoice sync pipeline");
+        SyncJob job = syncJobService.createQueuedJob("ACCOUNTING", "FULL");
+        syncMessageProducer.sendSyncRequest(job.getId(), job.getSourceName(), job.getSyncType());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
+    }
+
     @GetMapping("/jobs")
     public ResponseEntity<List<SyncJobDTO>> getRecentJobs() {
         return ResponseEntity.ok(syncJobService.getRecentJobs());
