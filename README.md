@@ -298,4 +298,4 @@ Portfolio project for educational and demonstration purposes.
 
 ---
 
-**Built to showcase enterprise full-stack development skills**
+**Built to showcase enterprise software engineering skills**
