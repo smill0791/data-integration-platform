@@ -458,8 +458,28 @@ CREATE TABLE final.orders (...);
   - [x] `app/page.tsx` — source filter pills + SourceSyncPanel
 - [x] `start-dev.sh` — ports 3002/3003 added, starts all 5 services
 
-**Future Phases**:
-- **Phase 8**: CI/CD with GitHub Actions, integration tests with Testcontainers
+**Phase 8: CI/CD with GitHub Actions + Integration Tests with Testcontainers** (Complete)
+- [x] Maven dependencies and plugins
+  - [x] Testcontainers 2.0.2 BOM + `testcontainers-junit-jupiter`, `testcontainers-mssqlserver`
+  - [x] WireMock Standalone 3.4.2 for HTTP API stubbing
+  - [x] `maven-surefire-plugin` — excludes `*IntegrationTest.java` and `*IT.java` from `./mvnw test`
+  - [x] `maven-failsafe-plugin` — includes `*IntegrationTest.java` and `*IT.java` for `./mvnw verify`
+- [x] Integration test infrastructure
+  - [x] `application-integration-test.yml` — SQL Server driver, Flyway enabled, SQS disabled, WireMock base URLs (port 18089)
+  - [x] `integration-test-init.sql` — creates `dataintegration` database in Testcontainers
+  - [x] `BaseIntegrationTest` — shared Azure SQL Edge container (ARM-native), static WireMock server, `@DynamicPropertySource` for DB, `@BeforeEach` cleanup of all schemas
+  - [x] `WireMockStubs` — paginated response stubs for CRM customers, ERP products, Accounting invoices with factory methods
+- [x] Integration tests (20 total)
+  - [x] `CustomerPipelineIntegrationTest` — 5 tests (full pipeline, upsert/MERGE, partial validation failure, API failure, phone/email normalization)
+  - [x] `ProductPipelineIntegrationTest` — 3 tests (full pipeline, upsert/MERGE, invalid price validation)
+  - [x] `InvoicePipelineIntegrationTest` — 3 tests (full pipeline, upsert/MERGE, invalid status validation)
+  - [x] `JobLifecycleIntegrationTest` — 4 tests (create→complete, failed job end_time, reverse chronological order, errors for job)
+  - [x] `RestApiIntegrationTest` — 5 tests (GET jobs, GET job by ID, 404, GET errors, POST sync returns 202 with `@MockBean` SyncMessageProducer)
+- [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`)
+  - [x] `backend-unit-tests` job — JDK 17, Maven cache, `./mvnw test`
+  - [x] `backend-integration-tests` job — JDK 17, Maven cache, `./mvnw failsafe:integration-test failsafe:verify`
+  - [x] `frontend` job — Node.js 20, npm cache, lint → type-check → build
+  - [x] Triggers on push to `main` and PRs to `main`
 
 ## Key Design Decisions
 
@@ -494,7 +514,9 @@ docker-compose ps                 # Check running services
 ### Backend (Maven)
 ```bash
 ./mvnw spring-boot:run           # Run Spring Boot app
-./mvnw test                      # Run all tests
+./mvnw test                      # Run unit tests (127 tests, no Docker needed)
+./mvnw verify                    # Run unit + integration tests (requires Docker)
+./mvnw failsafe:integration-test failsafe:verify  # Run integration tests only
 ./mvnw clean package             # Build JAR file
 ./mvnw flyway:migrate            # Run database migrations
 ./mvnw flyway:info               # Check migration status

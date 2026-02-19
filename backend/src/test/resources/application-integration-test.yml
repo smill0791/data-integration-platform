@@ -1,0 +1,65 @@
+spring:
+  datasource:
+    # URL, username, password injected by @DynamicPropertySource in BaseIntegrationTest
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: true
+    show-sql: false
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  graphql:
+    graphiql:
+      enabled: false
+
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      sqs:
+        endpoint: http://localhost:4566
+      credentials:
+        access-key: test
+        secret-key: test
+
+  autoconfigure:
+    exclude:
+      - io.awspring.cloud.autoconfigure.sqs.SqsAutoConfiguration
+
+app:
+  sqs:
+    enabled: false
+    customer-sync-queue: customer-sync-queue
+    customer-sync-dlq: customer-sync-dlq
+    max-retries: 3
+
+# Fixed WireMock port matching BaseIntegrationTest.WIREMOCK_PORT
+integration:
+  crm:
+    base-url: http://localhost:18089
+    page-size: 5
+    max-retries: 1
+  erp:
+    base-url: http://localhost:18089
+    page-size: 5
+    max-retries: 1
+  accounting:
+    base-url: http://localhost:18089
+    page-size: 5
+    max-retries: 1
+
+logging:
+  level:
+    root: WARN
+    com.dataplatform: INFO
+    org.flywaydb: INFO

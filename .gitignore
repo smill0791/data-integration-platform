@@ -52,3 +52,7 @@ coverage/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Claude Output
+/Users/sampsonmiller/Development/Data Integration Platform/Phase8Plan.md
+Phase8Plan.md
