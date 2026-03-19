@@ -22,6 +22,7 @@ import java.util.List;
 public class CustomerPipelineService {
 
     private final CustomerIntegrationService customerIntegrationService;
+    private final SalesforceIntegrationService salesforceIntegrationService;
     private final CustomerTransformationService transformationService;
     private final CustomerValidationService validationService;
     private final CustomerLoadService loadService;
@@ -46,13 +47,15 @@ public class CustomerPipelineService {
         // If job doesn't have staging data yet, run staging first
         List<RawCustomer> rawCustomers = rawCustomerRepository.findBySyncJobId(job.getId());
         if (rawCustomers.isEmpty() && "RUNNING".equals(job.getStatus())) {
-            SyncJobDTO stagingResult = customerIntegrationService.syncCustomersForJob(job);
+            SyncJobDTO stagingResult = runStaging(job);
             if ("FAILED".equals(stagingResult.getStatus())) {
                 log.warn("Staging failed for job {}, skipping pipeline", jobId);
                 return stagingResult;
             }
             rawCustomers = rawCustomerRepository.findBySyncJobId(job.getId());
         }
+
+        String sourceSystem = job.getSourceName() != null ? job.getSourceName() : "CRM";
 
         int loaded = 0;
         int failed = 0;
@@ -75,7 +78,7 @@ public class CustomerPipelineService {
                     continue;
                 }
 
-                loadService.loadCustomer(transformed);
+                loadService.loadCustomer(transformed, sourceSystem);
                 loaded++;
             } catch (Exception ex) {
                 failed++;
@@ -93,5 +96,12 @@ public class CustomerPipelineService {
         syncJobService.completeJob(job, loaded, failed);
         log.info("Pipeline completed for job {}: loaded={}, failed={}", jobId, loaded, failed);
         return SyncJobDTO.fromEntity(job);
+    }
+
+    private SyncJobDTO runStaging(SyncJob job) {
+        if ("SALESFORCE".equals(job.getSourceName())) {
+            return salesforceIntegrationService.syncContactsForJob(job);
+        }
+        return customerIntegrationService.syncCustomersForJob(job);
     }
 }

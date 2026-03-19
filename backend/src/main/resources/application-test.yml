@@ -53,6 +53,14 @@ integration:
     base-url: http://localhost:3003
     page-size: 20
     max-retries: 3
+  salesforce:
+    login-url: http://localhost:9999
+    client-id: test-client-id
+    client-secret: test-client-secret
+    username: test@example.com
+    password: testpassword
+    api-version: v59.0
+    max-retries: 3
 
 logging:
   level:

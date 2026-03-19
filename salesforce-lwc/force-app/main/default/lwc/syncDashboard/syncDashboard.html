@@ -1,0 +1,70 @@
+<template>
+    <lightning-card title="Data Integration Platform" icon-name="standard:data_streams">
+        <div slot="actions">
+            <lightning-button
+                label="Sync Contacts"
+                variant="brand"
+                icon-name="utility:sync"
+                onclick={handleTriggerSync}
+                disabled={isSyncing}>
+            </lightning-button>
+        </div>
+
+        <div class="slds-var-p-around_medium">
+            <!-- Status message -->
+            <template if:true={syncMessage}>
+                <div class={syncMessageClass}>
+                    <p>{syncMessage}</p>
+                </div>
+            </template>
+
+            <!-- Loading spinner -->
+            <template if:true={isLoading}>
+                <div class="slds-align_absolute-center slds-var-p-around_large">
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Jobs table -->
+            <template if:false={isLoading}>
+                <template if:true={hasJobs}>
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col"><div class="slds-truncate">Source</div></th>
+                                <th scope="col"><div class="slds-truncate">Status</div></th>
+                                <th scope="col"><div class="slds-truncate">Records</div></th>
+                                <th scope="col"><div class="slds-truncate">Failed</div></th>
+                                <th scope="col"><div class="slds-truncate">Started</div></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={jobs} for:item="job">
+                                <tr key={job.id}>
+                                    <td>
+                                        <span class={job.sourceBadgeClass}>
+                                            {job.sourceName}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class={job.statusBadgeClass}>
+                                            {job.status}
+                                        </span>
+                                    </td>
+                                    <td>{job.recordsProcessed}</td>
+                                    <td>{job.recordsFailed}</td>
+                                    <td>{job.formattedStartTime}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </template>
+                <template if:false={hasJobs}>
+                    <div class="slds-align_absolute-center slds-var-p-around_large">
+                        <p class="slds-text-color_weak">No sync jobs found. Click "Sync Contacts" to get started.</p>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

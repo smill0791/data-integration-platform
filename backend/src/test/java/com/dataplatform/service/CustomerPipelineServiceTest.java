@@ -32,6 +32,9 @@ class CustomerPipelineServiceTest {
     private CustomerIntegrationService customerIntegrationService;
 
     @Mock
+    private SalesforceIntegrationService salesforceIntegrationService;
+
+    @Mock
     private CustomerTransformationService transformationService;
 
     @Mock
@@ -96,7 +99,7 @@ class CustomerPipelineServiceTest {
 
         SyncJobDTO result = pipelineService.runFullPipeline();
 
-        verify(loadService, times(2)).loadCustomer(any());
+        verify(loadService, times(2)).loadCustomer(any(), anyString());
         verify(syncJobService).completeJob(runningJob, 2, 0);
         verify(syncErrorRepository, never()).save(any());
     }
@@ -114,7 +117,7 @@ class CustomerPipelineServiceTest {
 
         assertThat(result.getStatus()).isEqualTo("FAILED");
         verify(syncJobService, never()).getJobEntity(any());
-        verify(loadService, never()).loadCustomer(any());
+        verify(loadService, never()).loadCustomer(any(), anyString());
     }
 
     @Test
@@ -141,7 +144,7 @@ class CustomerPipelineServiceTest {
 
         SyncJobDTO result = pipelineService.runFullPipeline();
 
-        verify(loadService, times(1)).loadCustomer(any());
+        verify(loadService, times(1)).loadCustomer(any(), anyString());
         verify(syncErrorRepository).save(argThat(err -> "VALIDATION_ERROR".equals(err.getErrorType())));
         verify(syncJobService).completeJob(runningJob, 1, 1);
     }
@@ -168,7 +171,7 @@ class CustomerPipelineServiceTest {
 
         SyncJobDTO result = pipelineService.runFullPipeline();
 
-        verify(loadService, times(1)).loadCustomer(any());
+        verify(loadService, times(1)).loadCustomer(any(), anyString());
         verify(syncErrorRepository).save(argThat(err -> "PIPELINE_ERROR".equals(err.getErrorType())));
         verify(syncJobService).completeJob(runningJob, 1, 1);
     }
@@ -183,7 +186,7 @@ class CustomerPipelineServiceTest {
         ));
         when(transformationService.transform(anyString())).thenReturn(buildTransformed("CRM-001", "Alice"));
         when(validationService.validate(any())).thenReturn(validResult());
-        doThrow(new RuntimeException("DB error")).doNothing().when(loadService).loadCustomer(any());
+        doThrow(new RuntimeException("DB error")).doNothing().when(loadService).loadCustomer(any(), anyString());
         when(syncErrorRepository.save(any(SyncError.class))).thenAnswer(inv -> inv.getArgument(0));
         when(syncJobService.completeJob(any(), eq(1), eq(1))).thenAnswer(inv -> {
             runningJob.setRecordsProcessed(1);
@@ -210,7 +213,7 @@ class CustomerPipelineServiceTest {
 
         SyncJobDTO result = pipelineService.runFullPipeline();
 
-        verify(loadService, never()).loadCustomer(any());
+        verify(loadService, never()).loadCustomer(any(), anyString());
         verify(syncJobService).completeJob(runningJob, 0, 0);
     }
 

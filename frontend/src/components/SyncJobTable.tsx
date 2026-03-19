@@ -8,6 +8,7 @@ const sourceStyles: Record<string, string> = {
   CRM: 'bg-blue-50 text-blue-700 ring-blue-600/20',
   ERP: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
   ACCOUNTING: 'bg-purple-50 text-purple-700 ring-purple-600/20',
+  SALESFORCE: 'bg-sky-50 text-sky-700 ring-sky-600/20',
 };
 
 function SourceBadge({ source }: { source: string }) {

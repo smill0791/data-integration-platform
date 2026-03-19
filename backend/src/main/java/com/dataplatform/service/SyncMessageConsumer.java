@@ -49,6 +49,7 @@ public class SyncMessageConsumer {
         switch (message.getSourceName()) {
             case "ERP" -> productPipelineService.runPipelineForJob(message.getJobId());
             case "ACCOUNTING" -> invoicePipelineService.runPipelineForJob(message.getJobId());
+            case "SALESFORCE", "CRM" -> customerPipelineService.runPipelineForJob(message.getJobId());
             default -> customerPipelineService.runPipelineForJob(message.getJobId());
         }
     }

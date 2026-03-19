@@ -81,6 +81,20 @@ class CustomerLoadServiceTest {
     }
 
     @Test
+    void loadCustomer_withCustomSourceSystem_shouldUseSpecifiedSource() {
+        when(validatedCustomerRepository.findByExternalId("CRM-001")).thenReturn(Optional.empty());
+        when(validatedCustomerRepository.save(any(ValidatedCustomer.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(jdbcTemplate.update(anyString(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+
+        customerLoadService.loadCustomer(sampleCustomer, "SALESFORCE");
+
+        verify(jdbcTemplate).update(eq("EXEC [final].upsert_customers ?, ?, ?, ?, ?, ?"),
+                eq("CRM-001"), eq("Alice Smith"), eq("alice@example.com"),
+                eq("5551234567"), eq("123 Main St, Springfield, IL 62701"), eq("SALESFORCE"));
+    }
+
+    @Test
     void loadCustomer_jdbcFailure_shouldPropagate() {
         when(validatedCustomerRepository.findByExternalId("CRM-001")).thenReturn(Optional.empty());
         when(validatedCustomerRepository.save(any(ValidatedCustomer.class)))

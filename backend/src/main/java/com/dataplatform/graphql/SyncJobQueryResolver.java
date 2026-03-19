@@ -142,6 +142,9 @@ public class SyncJobQueryResolver {
             case "ACCOUNTING" -> records = rawInvoiceRepository.findBySyncJobId(job.getId()).stream()
                     .map(com.dataplatform.dto.StagingRecordDTO::fromRawInvoice)
                     .collect(Collectors.toList());
+            case "SALESFORCE", "CRM" -> records = rawCustomerRepository.findBySyncJobId(job.getId()).stream()
+                    .map(com.dataplatform.dto.StagingRecordDTO::fromRawCustomer)
+                    .collect(Collectors.toList());
             default -> records = rawCustomerRepository.findBySyncJobId(job.getId()).stream()
                     .map(com.dataplatform.dto.StagingRecordDTO::fromRawCustomer)
                     .collect(Collectors.toList());

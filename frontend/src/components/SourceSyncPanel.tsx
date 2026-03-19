@@ -6,6 +6,7 @@ const sources = [
   { name: 'CRM', label: 'CRM Customers', color: 'bg-blue-600 hover:bg-blue-700' },
   { name: 'ERP', label: 'ERP Products', color: 'bg-emerald-600 hover:bg-emerald-700' },
   { name: 'ACCOUNTING', label: 'Accounting Invoices', color: 'bg-purple-600 hover:bg-purple-700' },
+  { name: 'SALESFORCE', label: 'Salesforce Contacts', color: 'bg-sky-600 hover:bg-sky-700' },
 ];
 
 export default function SourceSyncPanel() {

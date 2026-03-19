@@ -481,6 +481,52 @@ CREATE TABLE final.orders (...);
   - [x] `frontend` job — Node.js 20, npm cache, lint → type-check → build
   - [x] Triggers on push to `main` and PRs to `main`
 
+**Phase 9: Salesforce Integration + Lightning Web Component** (Complete)
+- [x] Salesforce DTOs
+  - [x] `SalesforceTokenResponse` — OAuth token response: access_token, instance_url, token_type
+  - [x] `SalesforceContact` — SOQL Contact record with @JsonProperty mapping for Salesforce field names
+  - [x] `SalesforceQueryResult` — SOQL query response: totalSize, done, nextRecordsUrl, records
+- [x] Salesforce OAuth integration
+  - [x] `SalesforceAuthService` — Username-Password OAuth flow, in-memory token caching, refreshToken() support
+  - [x] Config via `integration.salesforce.*` properties (login-url, client-id, client-secret, username, password, api-version)
+- [x] Salesforce API client
+  - [x] `SalesforceApiClient` — SOQL query for Contacts, cursor-based pagination via nextRecordsUrl, 401 retry with token refresh, exponential backoff
+- [x] Salesforce integration service
+  - [x] `SalesforceIntegrationService` — fetches contacts, normalizes to CrmCustomerResponse format (FirstName+LastName→name, Mailing*→Address), stages in raw_customers
+  - [x] Per-record error isolation with STAGING_ERROR audit entries
+- [x] Pipeline reuse (no new migration needed)
+  - [x] `CustomerLoadService` — parameterized `loadCustomer(customer, sourceSystem)` overload, backward-compat single-arg method defaults to "CRM"
+  - [x] `CustomerPipelineService` — routes staging by source (SALESFORCE→SalesforceIntegrationService, CRM→CustomerIntegrationService), passes sourceSystem to loadService
+  - [x] `SyncMessageConsumer` — SALESFORCE case routes to customerPipelineService
+  - [x] `SyncJobQueryResolver` — SALESFORCE staging records dispatch to rawCustomerRepository
+- [x] REST & GraphQL endpoints
+  - [x] `POST /api/integrations/sync/salesforce-contacts` — creates QUEUED job with sourceName="SALESFORCE"
+  - [x] GraphQL `triggerSync` mutation works with sourceName="SALESFORCE" (no changes needed)
+- [x] Configuration
+  - [x] `application.yml` — Salesforce integration config block with env var placeholders
+  - [x] `application-test.yml` — dummy Salesforce config for unit tests
+  - [x] `application-integration-test.yml` — Salesforce config pointing to WireMock
+  - [x] `SecurityConfig` — CORS allowedOriginPatterns for *.lightning.force.com, *.my.salesforce.com
+- [x] Frontend updates
+  - [x] `SourceSyncPanel` — Salesforce Contacts button (sky-600 color)
+  - [x] `SyncJobTable` — SALESFORCE source badge (sky color scheme)
+- [x] Unit tests (17 new, 144 total passing)
+  - [x] `SalesforceAuthServiceTest` — 5 tests (fetch+cache, instance URL, refresh, REST failure, null response)
+  - [x] `SalesforceApiClientTest` — 5 tests (single page, pagination, 401 retry, max retries, null result)
+  - [x] `SalesforceIntegrationServiceTest` — 5 tests (success, normalization, API failure, per-record error isolation, empty response)
+  - [x] `CustomerLoadServiceTest` — +1 test (custom sourceSystem param)
+  - [x] `SyncMessageConsumerTest` — +1 test (SALESFORCE routing to customer pipeline)
+- [x] Integration tests (4 new, 24 total)
+  - [x] `WireMockStubs` — `stubSalesforceAuth()`, `stubSalesforceContacts()`, `createSalesforceContact()` factory
+  - [x] `SalesforcePipelineIntegrationTest` — 4 tests (full pipeline with source_system='SALESFORCE', upsert/MERGE, partial validation, normalization)
+- [x] Documentation
+  - [x] `docs/salesforce-setup.md` — Developer Org setup, Connected App, OAuth config, env vars, testing guide
+- [x] Lightning Web Component (`salesforce-lwc/`)
+  - [x] SFDX project generated via `sf project generate`
+  - [x] `DataPlatformController.cls` — Apex controller with getRecentSyncJobs() and triggerSync() HTTP callouts
+  - [x] `syncDashboard` LWC — Sync button, job table with status badges, auto-refresh polling
+  - [x] Exposed to Lightning App Pages, Record Pages, Home Page
+
 ## Key Design Decisions
 
 ### Why Four Schemas?
@@ -514,7 +560,7 @@ docker-compose ps                 # Check running services
 ### Backend (Maven)
 ```bash
 ./mvnw spring-boot:run           # Run Spring Boot app
-./mvnw test                      # Run unit tests (127 tests, no Docker needed)
+./mvnw test                      # Run unit tests (144 tests, no Docker needed)
 ./mvnw verify                    # Run unit + integration tests (requires Docker)
 ./mvnw failsafe:integration-test failsafe:verify  # Run integration tests only
 ./mvnw clean package             # Build JAR file
@@ -586,6 +632,6 @@ git push origin main             # Push to GitHub
 
 ## Notes
 
-This project is designed to be portfolio-ready and demonstrates skills required for enterprise full-stack development roles. It showcases real-world integration patterns, data quality management, and modern development practices.
+This project is designed to be portfolio-ready and demonstrates skills required for enterprise software engineering roles. It showcases real-world integration patterns, data quality management, and modern development practices.
 
 For complete implementation guide with day-by-day tasks and Cursor AI prompts, see [PROJECT_SPEC.md](./PROJECT_SPEC.md).

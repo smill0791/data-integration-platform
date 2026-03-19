@@ -22,6 +22,11 @@ public class CustomerLoadService {
 
     @Transactional
     public void loadCustomer(TransformedCustomer customer) {
+        loadCustomer(customer, "CRM");
+    }
+
+    @Transactional
+    public void loadCustomer(TransformedCustomer customer, String sourceSystem) {
         Optional<ValidatedCustomer> existing = validatedCustomerRepository
                 .findByExternalId(customer.getExternalId());
 
@@ -52,7 +57,7 @@ public class CustomerLoadService {
                 customer.getEmail(),
                 customer.getPhone(),
                 customer.getAddress(),
-                "CRM");
-        log.debug("Upserted final customer: {}", customer.getExternalId());
+                sourceSystem);
+        log.debug("Upserted final customer: {} (source={})", customer.getExternalId(), sourceSystem);
     }
 }

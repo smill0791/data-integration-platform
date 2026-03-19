@@ -48,6 +48,14 @@ public class IntegrationController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
     }
 
+    @PostMapping("/sync/salesforce-contacts")
+    public ResponseEntity<SyncJobDTO> syncSalesforceContacts() {
+        log.info("Triggering async Salesforce contact sync pipeline");
+        SyncJob job = syncJobService.createQueuedJob("SALESFORCE", "FULL");
+        syncMessageProducer.sendSyncRequest(job.getId(), job.getSourceName(), job.getSyncType());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
+    }
+
     @GetMapping("/jobs")
     public ResponseEntity<List<SyncJobDTO>> getRecentJobs() {
         return ResponseEntity.ok(syncJobService.getRecentJobs());

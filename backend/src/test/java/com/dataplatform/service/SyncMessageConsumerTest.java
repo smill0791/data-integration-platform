@@ -73,6 +73,20 @@ class SyncMessageConsumerTest {
     }
 
     @Test
+    void handleSyncMessage_salesforceSource_shouldRouteToCustomerPipeline() throws Exception {
+        SyncMessage message = SyncMessage.builder().jobId(5L).sourceName("SALESFORCE").syncType("FULL").build();
+        String json = objectMapper.writeValueAsString(message);
+        when(syncJobService.startJob(5L)).thenReturn(SyncJob.builder().id(5L).status("RUNNING").startTime(LocalDateTime.now()).build());
+        when(customerPipelineService.runPipelineForJob(5L)).thenReturn(SyncJobDTO.builder().id(5L).status("COMPLETED").build());
+
+        consumer.handleSyncMessage(json);
+
+        verify(customerPipelineService).runPipelineForJob(5L);
+        verify(productPipelineService, never()).runPipelineForJob(any());
+        verify(invoicePipelineService, never()).runPipelineForJob(any());
+    }
+
+    @Test
     void handleSyncMessage_whenPipelineFails_shouldFailJobAndRethrow() throws Exception {
         SyncMessage message = SyncMessage.builder().jobId(4L).sourceName("CRM").syncType("FULL").build();
         String json = objectMapper.writeValueAsString(message);

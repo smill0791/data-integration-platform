@@ -1,9 +1,6 @@
 package com.dataplatform.integration;
 
-import com.dataplatform.dto.AccountingInvoiceResponse;
-import com.dataplatform.dto.CrmCustomerResponse;
-import com.dataplatform.dto.ErpProductResponse;
-import com.dataplatform.dto.PaginatedResponse;
+import com.dataplatform.dto.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -72,6 +69,57 @@ public class WireMockStubs {
                 throw new RuntimeException("Failed to serialize stub response", e);
             }
         }
+    }
+
+    // Salesforce OAuth token stub
+    public static void stubSalesforceAuth(WireMockServer server) {
+        String tokenJson = "{\"access_token\":\"test-sf-token\",\"instance_url\":\"http://localhost:18089\",\"token_type\":\"Bearer\"}";
+        server.stubFor(WireMock.post(urlPathEqualTo("/services/oauth2/token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(tokenJson)));
+    }
+
+    // Salesforce SOQL query stub
+    public static void stubSalesforceContacts(WireMockServer server, List<SalesforceContact> contacts) {
+        try {
+            SalesforceQueryResult result = SalesforceQueryResult.builder()
+                    .totalSize(contacts.size())
+                    .done(true)
+                    .records(contacts)
+                    .build();
+            String json = objectMapper.writeValueAsString(result);
+            server.stubFor(WireMock.get(urlPathEqualTo("/services/data/v59.0/query"))
+                    .willReturn(aResponse()
+                            .withStatus(200)
+                            .withHeader("Content-Type", "application/json")
+                            .withBody(json)));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize Salesforce stub response", e);
+        }
+    }
+
+    public static void stubSalesforceContactsFailure(WireMockServer server) {
+        stubSalesforceAuth(server);
+        server.stubFor(WireMock.get(urlPathEqualTo("/services/data/v59.0/query"))
+                .willReturn(aResponse().withStatus(500).withBody("Internal Server Error")));
+    }
+
+    public static SalesforceContact createSalesforceContact(String id, String firstName, String lastName,
+                                                              String email, String phone) {
+        return SalesforceContact.builder()
+                .id(id)
+                .firstName(firstName)
+                .lastName(lastName)
+                .email(email)
+                .phone(phone)
+                .mailingStreet("456 Oak Ave")
+                .mailingCity("Denver")
+                .mailingState("CO")
+                .mailingPostalCode("80201")
+                .lastModifiedDate("2024-03-15T14:30:00.000+0000")
+                .build();
     }
 
     // Test data factory methods
