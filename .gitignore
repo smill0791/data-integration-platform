@@ -53,6 +53,9 @@ coverage/
 .coverage
 htmlcov/
 
+# Salesforce CLI cache (created at repo root by sf project generate)
+.sfdx/
+.sf/
+
 # Claude Output
-/Users/sampsonmiller/Development/Data Integration Platform/Phase8Plan.md
 Phase8Plan.md
