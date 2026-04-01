@@ -52,6 +52,7 @@ coverage/
 .pytest_cache/
 .coverage
 htmlcov/
+create-demo-contacts.apex
 
 # Salesforce CLI cache (created at repo root by sf project generate)
 .sfdx/
@@ -59,3 +60,4 @@ htmlcov/
 
 # Claude Output
 Phase8Plan.md
+

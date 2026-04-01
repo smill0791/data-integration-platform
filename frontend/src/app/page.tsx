@@ -8,6 +8,7 @@ import SyncMetricsChart from '@/components/SyncMetricsChart';
 import SourceSyncPanel from '@/components/SourceSyncPanel';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorAlert from '@/components/ErrorAlert';
+import Link from 'next/link';
 import { SyncJob } from '@/types/syncJob';
 
 const sourceFilters = [
@@ -76,7 +77,12 @@ export default function DashboardPage() {
 
             <div className="mt-6">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Recent Sync Jobs</h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-medium text-gray-900">Recent Sync Jobs</h2>
+                  <Link href="/customers" className="text-sm text-blue-600 hover:underline">
+                    View Synced Customers →
+                  </Link>
+                </div>
                 <div className="flex gap-1">
                   {sourceFilters.map((f) => (
                     <button
