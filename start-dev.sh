@@ -3,6 +3,14 @@
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
+# Load environment variables from .env if present
+if [ -f "$ROOT_DIR/.env" ]; then
+  echo "Loading environment from .env..."
+  set -a
+  source "$ROOT_DIR/.env"
+  set +a
+fi
+
 cleanup() {
   echo ""
   echo "Shutting down services..."

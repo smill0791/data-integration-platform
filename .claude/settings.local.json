@@ -11,7 +11,26 @@
       "Bash(./mvnw clean compile:*)",
       "Bash(./mvnw test:*)",
       "Bash(docker-compose up:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(./mvnw dependency:tree:*)",
+      "Bash(npm install:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(lsof:*)",
+      "Bash(./mvnw spring-boot:run:*)",
+      "Bash(kill:*)",
+      "Bash(cd:*)",
+      "Bash(DOCKER_HOST=unix:///var/run/docker.sock cd:*)",
+      "Bash(DOCKER_HOST=unix:///var/run/docker.sock ./mvnw failsafe:integration-test:*)",
+      "Bash(docker context ls:*)",
+      "Bash(~/.testcontainers.properties)",
+      "Bash(TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock DOCKER_HOST=unix:///var/run/docker.sock ./mvnw failsafe:integration-test:*)",
+      "Bash(docker version:*)",
+      "Bash(python3:*)",
+      "Bash(./mvnw failsafe:integration-test:*)",
+      "Bash(gh run:*)",
+      "Bash(source \"/Users/sampsonmiller/Development/Data Integration Platform/.env\")"
     ]
   }
 }

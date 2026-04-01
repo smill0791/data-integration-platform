@@ -11,8 +11,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,12 +43,17 @@ public class SalesforceApiClient {
     public List<SalesforceContact> fetchContacts() {
         List<SalesforceContact> allContacts = new ArrayList<>();
         String instanceUrl = authService.getInstanceUrl();
-        String encodedQuery = URLEncoder.encode(SOQL_QUERY, StandardCharsets.UTF_8);
-        String url = instanceUrl + "/services/data/" + apiVersion + "/query?q=" + encodedQuery;
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(instanceUrl + "/services/data/" + apiVersion + "/query")
+                .queryParam("q", SOQL_QUERY)
+                .build()
+                .encode()
+                .toUri();
 
         boolean hasMore = true;
+        String nextUrl = null;
         while (hasMore) {
-            SalesforceQueryResult result = executeQueryWithRetry(url);
+            SalesforceQueryResult result = executeQueryWithRetry(nextUrl != null ? URI.create(nextUrl) : uri);
             if (result == null || result.getRecords() == null) {
                 break;
             }
@@ -57,7 +63,7 @@ public class SalesforceApiClient {
             if (result.isDone() || result.getNextRecordsUrl() == null) {
                 hasMore = false;
             } else {
-                url = instanceUrl + result.getNextRecordsUrl();
+                nextUrl = instanceUrl + result.getNextRecordsUrl();
             }
         }
 
@@ -65,7 +71,7 @@ public class SalesforceApiClient {
         return allContacts;
     }
 
-    private SalesforceQueryResult executeQueryWithRetry(String url) {
+    private SalesforceQueryResult executeQueryWithRetry(URI url) {
         boolean retried401 = false;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {

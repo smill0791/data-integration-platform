@@ -69,8 +69,6 @@ integration:
     login-url: ${SF_LOGIN_URL:https://login.salesforce.com}
     client-id: ${SF_CLIENT_ID:}
     client-secret: ${SF_CLIENT_SECRET:}
-    username: ${SF_USERNAME:}
-    password: ${SF_PASSWORD:}
     api-version: ${SF_API_VERSION:v59.0}
     max-retries: ${SF_MAX_RETRIES:3}
 

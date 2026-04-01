@@ -21,8 +21,6 @@ public class SalesforceAuthService {
     private final String loginUrl;
     private final String clientId;
     private final String clientSecret;
-    private final String username;
-    private final String password;
 
     private String cachedAccessToken;
     private String cachedInstanceUrl;
@@ -31,15 +29,11 @@ public class SalesforceAuthService {
             RestTemplate restTemplate,
             @Value("${integration.salesforce.login-url}") String loginUrl,
             @Value("${integration.salesforce.client-id}") String clientId,
-            @Value("${integration.salesforce.client-secret}") String clientSecret,
-            @Value("${integration.salesforce.username}") String username,
-            @Value("${integration.salesforce.password}") String password) {
+            @Value("${integration.salesforce.client-secret}") String clientSecret) {
         this.restTemplate = restTemplate;
         this.loginUrl = loginUrl;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.username = username;
-        this.password = password;
     }
 
     public String getAccessToken() {
@@ -64,11 +58,9 @@ public class SalesforceAuthService {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("grant_type", "password");
+        params.add("grant_type", "client_credentials");
         params.add("client_id", clientId);
         params.add("client_secret", clientSecret);
-        params.add("username", username);
-        params.add("password", password);
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 

@@ -16,6 +16,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +50,7 @@ class SalesforceApiClientTest {
         SalesforceQueryResult result = SalesforceQueryResult.builder()
                 .totalSize(1).done(true).records(List.of(contact)).build();
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
                 .thenReturn(new ResponseEntity<>(result, HttpStatus.OK));
 
         List<SalesforceContact> contacts = apiClient.fetchContacts();
@@ -72,14 +73,14 @@ class SalesforceApiClientTest {
         SalesforceQueryResult page2 = SalesforceQueryResult.builder()
                 .totalSize(2).done(true).records(List.of(c2)).build();
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
                 .thenReturn(new ResponseEntity<>(page1, HttpStatus.OK))
                 .thenReturn(new ResponseEntity<>(page2, HttpStatus.OK));
 
         List<SalesforceContact> contacts = apiClient.fetchContacts();
 
         assertThat(contacts).hasSize(2);
-        verify(restTemplate, times(2)).exchange(anyString(), eq(HttpMethod.GET), any(), eq(SalesforceQueryResult.class));
+        verify(restTemplate, times(2)).exchange(any(URI.class), eq(HttpMethod.GET), any(), eq(SalesforceQueryResult.class));
     }
 
     @Test
@@ -91,7 +92,7 @@ class SalesforceApiClientTest {
         SalesforceQueryResult result = SalesforceQueryResult.builder()
                 .totalSize(1).done(true).records(List.of(contact)).build();
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "Unauthorized", null, null, null))
                 .thenReturn(new ResponseEntity<>(result, HttpStatus.OK));
         when(authService.refreshToken()).thenReturn("new-token");
@@ -107,7 +108,7 @@ class SalesforceApiClientTest {
         when(authService.getInstanceUrl()).thenReturn("https://myorg.my.salesforce.com");
         when(authService.getAccessToken()).thenReturn("test-token");
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
                 .thenThrow(new RestClientException("Connection timed out"));
 
         assertThatThrownBy(() -> apiClient.fetchContacts())
@@ -120,7 +121,7 @@ class SalesforceApiClientTest {
         when(authService.getInstanceUrl()).thenReturn("https://myorg.my.salesforce.com");
         when(authService.getAccessToken()).thenReturn("test-token");
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(SalesforceQueryResult.class)))
                 .thenReturn(new ResponseEntity<>(null, HttpStatus.OK));
 
         List<SalesforceContact> contacts = apiClient.fetchContacts();

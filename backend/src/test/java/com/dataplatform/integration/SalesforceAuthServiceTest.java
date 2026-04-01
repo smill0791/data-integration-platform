@@ -30,9 +30,7 @@ class SalesforceAuthServiceTest {
                 restTemplate,
                 "https://login.salesforce.com",
                 "test-client-id",
-                "test-client-secret",
-                "user@example.com",
-                "password+token");
+                "test-client-secret");
     }
 
     @Test
