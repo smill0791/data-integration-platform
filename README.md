@@ -4,20 +4,21 @@ An enterprise-grade data integration system built with Spring Boot, SQL Server, 
 
 ## 🎯 Project Overview
 
-The platform ingests data from multiple external APIs (CRM, ERP, Accounting), processes it through a validated ETL pipeline, and surfaces real-time monitoring through a React dashboard backed by both REST and GraphQL APIs.
+The platform ingests data from multiple external APIs (CRM, ERP, Accounting, Salesforce), processes it through a validated ETL pipeline, and surfaces real-time monitoring through a React dashboard backed by both REST and GraphQL APIs.
 
 **Core Skills Demonstrated**:
 - Multi-source ETL pipeline with per-record error isolation
 - Asynchronous processing via AWS SQS (LocalStack)
 - Real-time WebSocket subscriptions with GraphQL
 - Four-schema database architecture (staging → validated → final + audit)
-- 147 tests: 127 unit (H2) + 20 integration (Testcontainers + real SQL Server)
+- Salesforce OAuth integration + Lightning Web Component
+- 168 tests: 144 unit (H2) + 24 integration (Testcontainers + real SQL Server)
 - CI/CD with GitHub Actions
 
 ## 🏗️ Architecture
 
 ```
-External APIs (CRM / ERP / Accounting)
+External APIs (CRM / ERP / Accounting / Salesforce)
         ↓
   Integration Service
         ↓
@@ -94,7 +95,7 @@ data-integration-platform/
 │       │   │   ├── dto/            # API request/response objects
 │       │   │   ├── exception/      # Global exception handling
 │       │   │   ├── graphql/        # Query, mutation, subscription resolvers
-│       │   │   ├── integration/    # External API clients (CRM, ERP, Accounting)
+│       │   │   ├── integration/    # External API clients (CRM, ERP, Accounting, Salesforce)
 │       │   │   ├── model/          # JPA entities (all 4 schemas)
 │       │   │   ├── repository/     # Spring Data JPA repositories
 │       │   │   ├── service/        # Business logic, pipeline orchestration
@@ -106,8 +107,8 @@ data-integration-platform/
 │       │       └── graphql/        # GraphQL schema definition
 │       └── test/
 │           ├── java/com/dataplatform/
-│           │   ├── (unit tests)    # 127 tests, H2 in-memory DB
-│           │   └── integration/    # 20 tests, Testcontainers SQL Server
+│           │   ├── (unit tests)    # 144 tests, H2 in-memory DB
+│           │   └── integration/    # 24 tests, Testcontainers SQL Server
 │           └── resources/          # application-integration-test.yml
 ├── frontend/
 │   └── src/
@@ -123,10 +124,16 @@ data-integration-platform/
 │   └── accounting-api/             # Express, @faker-js/faker, port 3003
 ├── localstack/
 │   └── init-scripts/              # SQS queue creation on startup
+├── salesforce-lwc/                # SFDX project: Apex controller + syncDashboard LWC
+├── docs/                          # Specification, codebase guide, setup, demo notes
+│   ├── PROJECT_SPEC.md            # Complete technical specification
+│   ├── CODEBASE_GUIDE.md          # Architecture deep-dive
+│   ├── salesforce-setup.md        # Salesforce Dev Org + OAuth setup
+│   └── DEMO_GUIDE.md              # Demo walkthrough notes
 ├── docker-compose.yml             # SQL Server + LocalStack
 ├── start-dev.sh                   # One-command dev startup
 ├── CLAUDE.md                      # Development conventions and architecture
-└── PROJECT_SPEC.md               # Complete technical specification
+└── README.md                      # This file
 ```
 
 ## 🛠️ Technology Stack
@@ -141,7 +148,7 @@ data-integration-platform/
 | Flyway | Database migrations (V1–V4) |
 | AWS SDK / Spring Cloud AWS | SQS producer and consumer |
 | Lombok | Reduce boilerplate |
-| JUnit 5 + Mockito | Unit testing (127 tests) |
+| JUnit 5 + Mockito | Unit testing (144 tests) |
 | Testcontainers 2.0.2 | Integration testing with real SQL Server |
 | WireMock | HTTP API stubbing in integration tests |
 
@@ -179,23 +186,54 @@ data-integration-platform/
 | `POST` | `/api/integrations/sync/customers` | Queue CRM sync (returns 202) |
 | `POST` | `/api/integrations/sync/products` | Queue ERP sync (returns 202) |
 | `POST` | `/api/integrations/sync/invoices` | Queue Accounting sync (returns 202) |
+| `POST` | `/api/integrations/sync/salesforce-contacts` | Queue Salesforce contact sync (returns 202) |
 | `GET` | `/api/integrations/jobs` | List recent sync jobs |
 | `GET` | `/api/integrations/jobs/{id}` | Get sync job by ID |
 | `GET` | `/api/integrations/jobs/{id}/errors` | Get errors for a job |
 
 ### GraphQL (`/graphql`)
 - **Queries**: `syncJob`, `syncJobs` (filter/sort/paginate), `syncMetrics`
-- **Mutations**: `triggerSync`, `cancelSync`
+- **Mutations**: `triggerSync` (accepts `sourceName`: CRM / ERP / ACCOUNTING / SALESFORCE), `cancelSync`
 - **Subscriptions**: `syncJobUpdated` (WebSocket, real-time status updates)
 - **Playground**: http://localhost:8080/graphiql
+
+## 🔒 Security & Configuration
+
+**Secrets are never committed.** Every credential is read from an environment
+variable with a local-dev fallback (see `backend/src/main/resources/application.yml`,
+e.g. `${SF_CLIENT_SECRET:}`, `${DB_PASSWORD:YourStrong@Passw0rd}`). Real Salesforce
+credentials live in a gitignored `.env` that is sourced before startup — they are
+not present in the repository or its git history. See
+[docs/salesforce-setup.md](./docs/salesforce-setup.md) for the required variables.
+
+```bash
+# Required for Salesforce sync (set in .env, then `source .env`)
+export SF_LOGIN_URL=...        export SF_CLIENT_ID=...
+export SF_CLIENT_SECRET=...    export SF_API_VERSION=v59.0
+# Optional overrides (sensible local defaults exist for all of these)
+export DB_PASSWORD=...         export AWS_ACCESS_KEY=...   export AWS_SECRET_KEY=...
+```
+
+**Intentional local-dev scope.** A few choices are deliberately simplified for a
+self-contained demo and would change for production:
+
+- **API authentication** — `SecurityConfig` permits all requests so the dashboard
+  and mock clients work without a login flow. In production this API would sit
+  behind authentication (e.g. a Spring Security OAuth2 resource server / JWT) with
+  per-endpoint authorization, rather than `anyRequest().permitAll()`.
+- **CORS** is restricted to `localhost:3000` and Salesforce domains
+  (`*.lightning.force.com`, `*.my.salesforce.com`), not left fully open.
+- **Salesforce callout** — the `syncDashboard` LWC reaches the backend through an
+  Apex callout. For a real deployment the endpoint belongs in a **Named Credential**
+  (which also stores auth securely), not the hardcoded host used for local tunneling.
 
 ## 🧪 Testing
 
 ```bash
-# Unit tests — 127 tests, H2 in-memory DB, no Docker needed
+# Unit tests — 144 tests, H2 in-memory DB, no Docker needed
 cd backend && ./mvnw test
 
-# Integration tests — 20 tests, requires Docker (SQL Server + WireMock)
+# Integration tests — 24 tests, requires Docker (SQL Server + WireMock)
 cd backend && ./mvnw failsafe:integration-test failsafe:verify
 
 # Unit + integration together
@@ -209,15 +247,18 @@ cd frontend && npm run lint && npm run build
 
 | Suite | Tests | Database | External APIs |
 |---|---|---|---|
-| Service unit tests | 65 | H2 in-memory | Mocked (Mockito) |
-| Resolver/controller unit tests | 62 | H2 in-memory | Mocked (Mockito) |
-| Pipeline integration tests | 11 | SQL Server (Testcontainers) | WireMock stubs |
+| Service, client, transform & validation unit tests | 126 | H2 in-memory | Mocked (Mockito) |
+| GraphQL resolver unit tests | 17 | H2 in-memory | Mocked (Mockito) |
+| Application context load | 1 | H2 in-memory | — |
+| Pipeline integration tests (CRM / ERP / Accounting / Salesforce) | 15 | SQL Server (Testcontainers) | WireMock stubs |
 | Job lifecycle integration tests | 4 | SQL Server (Testcontainers) | — |
-| REST API integration tests | 5 | SQL Server (Testcontainers) | WireMock stubs |
+| REST API integration tests | 5 | SQL Server (Testcontainers) | WireMock + `@MockBean` |
+
+**Total: 168** — 144 unit (`./mvnw test`) + 24 integration (`./mvnw verify`).
 
 ## 📈 Implementation Status
 
-All 8 phases complete:
+All 9 phases complete:
 
 **Phase 1 — Backend Foundation**
 - [x] Spring Boot 3.2 with all dependencies configured
@@ -269,6 +310,13 @@ All 8 phases complete:
 - [x] WireMock for HTTP API stubbing in integration tests
 - [x] `BaseIntegrationTest` — shared container lifecycle, schema cleanup between tests
 - [x] Maven Surefire/Failsafe split: `./mvnw test` (unit only) vs `./mvnw verify` (all)
+
+**Phase 9 — Salesforce Integration & Lightning Web Component**
+- [x] Salesforce OAuth client (`SalesforceAuthService`) with in-memory token caching and refresh
+- [x] `SalesforceApiClient` — SOQL contact query, cursor pagination, 401-retry with token refresh
+- [x] `SalesforceIntegrationService` — normalizes contacts and reuses the customer pipeline (no new migration)
+- [x] `POST /api/integrations/sync/salesforce-contacts` + `triggerSync` with `sourceName=SALESFORCE`
+- [x] `syncDashboard` Lightning Web Component + `DataPlatformController` Apex (see `salesforce-lwc/`)
 
 ## 🎓 Concepts Demonstrated
 

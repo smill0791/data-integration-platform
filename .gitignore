@@ -57,7 +57,3 @@ create-demo-contacts.apex
 # Salesforce CLI cache (created at repo root by sf project generate)
 .sfdx/
 .sf/
-
-# Claude Output
-Phase8Plan.md
-

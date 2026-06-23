@@ -6,7 +6,7 @@ This is a comprehensive enterprise data integration platform built to demonstrat
 
 **Purpose**: Portfolio project showcasing Spring Boot, SQL Server, React, AWS integration, and enterprise architecture patterns.
 
-**Full Specification**: See [PROJECT_SPEC.md](./PROJECT_SPEC.md) for complete technical details, implementation phases, and architecture diagrams.
+**Full Specification**: See [docs/PROJECT_SPEC.md](./docs/PROJECT_SPEC.md) for complete technical details, implementation phases, and architecture diagrams.
 
 ## Technology Stack
 
@@ -246,286 +246,26 @@ CREATE TABLE final.orders (...);
 
 ## Current Implementation Status
 
-**Phase 1: Backend Foundation** (Complete)
-- [x] Git repository initialized
-- [x] Project structure created (backend, frontend, mock-apis, database)
-- [x] CLAUDE.md created with development conventions
-- [x] Docker Compose configured (SQL Server + LocalStack)
-- [x] .gitignore files added (root, backend, frontend)
-- [x] GraphQL baseline structure created
-  - [x] Backend GraphQL schema and package structure
-  - [x] Frontend Apollo Client setup and query templates
-  - [x] GraphQL documentation and patterns
-- [x] GitHub repository created and pushed
-- [x] Spring Boot 3.2 backend initialized with dependencies
-  - [x] Maven build (pom.xml) with Spring Web, Data JPA, Security, Validation, DevTools
-  - [x] GraphQL + WebFlux starters with extended scalars (DateTime, Date)
-  - [x] SQL Server driver, Flyway, Lombok, H2 (test)
-  - [x] Maven wrapper (mvnw) for portable builds
-- [x] Application configuration
-  - [x] application.yml with SQL Server datasource, JPA, Flyway, GraphQL settings
-  - [x] application-test.yml with H2 in-memory test profile
-  - [x] Spring Security config (CORS for localhost:3000, permit all for now)
-  - [x] GraphQL scalar config (DateTime, Date)
-- [x] Domain models and repositories
-  - [x] SyncJob entity (audit.sync_jobs)
-  - [x] SyncError entity (audit.sync_errors)
-  - [x] RawCustomer entity (staging.raw_customers)
-  - [x] JPA repositories with query methods for each entity
-- [x] Database migrations created (Flyway)
-  - [x] V1__initial_schema.sql: 4 schemas (audit, staging, validated, final) and 5 tables
-  - [x] Database init script for Docker (01-create-database.sql)
-- [x] Health check endpoint (GET /health)
-- [x] Context load test passing (DataIntegrationApplicationTests)
-- [x] Docker Compose health check fixed (mssql-tools18 path)
+All nine build phases are complete. The platform ingests from four sources
+(CRM, ERP, Accounting, Salesforce) through the full staging → validated → final
+pipeline, with async SQS processing, REST + GraphQL APIs, a React dashboard, and
+a Salesforce Lightning Web Component.
 
-**Phase 2: CRM API Integration Pipeline** (Complete)
-- [x] Mock CRM API (Express.js)
-  - [x] 100 fake customers generated at startup via @faker-js/faker
-  - [x] `GET /api/customers?page=0&size=20` — paginated response
-  - [x] `GET /api/customers/:id` — single customer lookup
-  - [x] Random delay (100-500ms) and 5% simulated failure rate
-- [x] DTOs
-  - [x] `CrmCustomerResponse` — CRM customer with nested Address
-  - [x] `PaginatedResponse<T>` — generic paginated wrapper
-  - [x] `SyncJobDTO` — API response DTO with `fromEntity()` converter
-- [x] Exception handling
-  - [x] `IntegrationException` — upstream API failures (maps to 502)
-  - [x] `ResourceNotFoundException` — missing entities (maps to 404)
-  - [x] `GlobalExceptionHandler` — @RestControllerAdvice with structured error responses
-- [x] REST client infrastructure
-  - [x] `RestTemplateConfig` — RestTemplate bean with 5s connect / 10s read timeouts
-  - [x] `CrmApiClient` — paginated fetch, retry logic (3 attempts, exponential backoff)
-  - [x] CRM integration properties in application.yml (`integration.crm.*`)
-- [x] Service layer
-  - [x] `SyncJobService` — sync job lifecycle (create, complete, fail) with individual @Transactional boundaries
-  - [x] `CustomerIntegrationService` — orchestrates fetch → stage → audit with per-record error isolation
-- [x] REST controller
-  - [x] `POST /api/integrations/sync/customers` — trigger customer sync
-  - [x] `GET /api/integrations/jobs` — list recent sync jobs
-  - [x] `GET /api/integrations/jobs/{id}` — get sync job by ID
-- [x] Unit tests (12/12 passing)
-  - [x] `SyncJobServiceTest` — 7 tests (create, complete, fail, get, not-found, recent)
-  - [x] `CustomerIntegrationServiceTest` — 4 tests (success, partial failure, API failure, empty response)
-- [x] Build fixes
-  - [x] Lombok annotation processor configured in maven-compiler-plugin
-  - [x] byte-buddy upgraded to 1.15.11 for Java 23 compatibility
+| Phase | Scope | Key artifacts |
+|---|---|---|
+| 1 | Backend foundation | Spring Boot 3.2, four-schema DB, Flyway V1, health endpoint |
+| 2 | CRM integration pipeline | `CrmApiClient`, `CustomerIntegrationService`, sync job lifecycle |
+| 3 | Transform & load | Transformation/validation/load services, `upsert_customers` MERGE proc |
+| 4 | React dashboard | Next.js 14, React Query hooks, metric cards, job detail + error log |
+| 5 | GraphQL + real-time | Query/mutation/subscription resolvers, Apollo client, WebSocket updates |
+| 6 | SQS async processing | `@SqsListener`, `QUEUED` status, DLQ via LocalStack |
+| 7 | ERP & Accounting sources | Product/invoice pipelines, migrations V3/V4, multi-source routing |
+| 8 | CI/CD & integration tests | GitHub Actions, Testcontainers (Azure SQL Edge), WireMock |
+| 9 | Salesforce + LWC | OAuth client, contact sync, `syncDashboard` LWC, Apex controller |
 
-**Phase 3: Transformation & Loading Pipeline** (Complete)
-- [x] Flyway migration V2 — `[final].upsert_customers` stored procedure (SQL Server MERGE: update on match, insert on no match)
-- [x] DTOs
-  - [x] `TransformedCustomer` — intermediate DTO with cleaned fields (externalId, name, email, phone, flattened address, rawData)
-  - [x] `ValidationResult` — wraps valid boolean, TransformedCustomer, and List<String> errors
-- [x] Entities and repositories
-  - [x] `ValidatedCustomer` entity (validated.validated_customers) + `ValidatedCustomerRepository` with `findByExternalId()`
-  - [x] `FinalCustomer` entity ([final].customers) + `FinalCustomerRepository` with `findByExternalId()`
-- [x] `CustomerTransformationService` — parses raw JSON via ObjectMapper, normalizes phone (strip non-digits), email (lowercase+trim), address (flatten to "street, city, state zip"), name (trim)
-- [x] `CustomerValidationService` — stateless validation: external_id required, name required, email format regex (if present), returns all errors
-- [x] `CustomerLoadService` — @Transactional upsert into validated schema (find-or-create by external_id) + EXEC stored procedure for final schema with source_system='CRM'
-- [x] `CustomerPipelineService` — full pipeline orchestrator: stage → transform → validate → load with per-record error isolation (VALIDATION_ERROR / PIPELINE_ERROR)
-- [x] `SyncJobService.getJobEntity()` — returns raw SyncJob entity for pipeline orchestrator
-- [x] `IntegrationController` updated — POST /api/integrations/sync/customers now runs full pipeline via CustomerPipelineService
-- [x] Unit tests (24 new, 36 total passing)
-  - [x] `CustomerTransformationServiceTest` — 8 tests (happy path, null fields, partial address, invalid JSON, mixed-case email, phone formats)
-  - [x] `CustomerValidationServiceTest` — 7 tests (valid, missing fields, invalid email, null email, multiple errors, edge-case emails)
-  - [x] `CustomerLoadServiceTest` — 3 tests (new record, existing record update, JDBC failure propagation)
-  - [x] `CustomerPipelineServiceTest` — 6 tests (all success, staging fails, validation/transform/load failures, empty staging)
-
-**Phase 4: React Dashboard** (Complete)
-- [x] Backend sync errors endpoint
-  - [x] `SyncErrorDTO` — DTO with `fromEntity()` mapping
-  - [x] `SyncJobService.getErrorsForJob()` — validates job exists (404), returns mapped errors
-  - [x] `GET /api/integrations/jobs/{id}/errors` — new controller endpoint
-  - [x] Unit tests (2 new, 38 total passing)
-- [x] Frontend infrastructure
-  - [x] `next.config.js`, `tsconfig.json`, `tailwind.config.js`, `postcss.config.js`
-  - [x] `.env.local.example` documenting `NEXT_PUBLIC_API_URL`
-  - [x] `globals.css` (Tailwind directives), `providers.tsx` (React Query + Apollo), `layout.tsx`
-- [x] Data layer
-  - [x] `types/syncJob.ts` — SyncJob, SyncError, DashboardMetrics, DailyStatPoint interfaces
-  - [x] `services/syncJobService.ts` — fetch wrappers for all 4 API calls
-- [x] Custom hooks
-  - [x] `useSyncJobs` — polls every 5s only when a RUNNING job exists
-  - [x] `useSyncJob(id)` — polls every 5s while job is RUNNING
-  - [x] `useSyncErrors(jobId)` — no polling (errors are immutable)
-  - [x] `useTriggerSync` — mutation with `invalidateQueries` on success
-  - [x] `useDashboardMetrics(jobs)` — client-side computation of 24h/30d metrics + daily chart data
-- [x] Components
-  - [x] `StatusBadge` — colored pill with pulse animation for RUNNING
-  - [x] `MetricCard`, `LoadingSpinner`, `ErrorAlert` — shared atoms
-  - [x] `SyncJobTable` — sortable table with row links to job detail
-  - [x] `TriggerSyncButton` — self-contained with loading and error state
-  - [x] `SyncMetricsChart` — Recharts BarChart with completed/failed series
-  - [x] `SyncJobDetails` — job summary grid + error log table
-- [x] Pages
-  - [x] `app/page.tsx` — dashboard with metric cards, chart, job table
-  - [x] `app/jobs/[id]/page.tsx` — job detail with auto-polling while RUNNING
-- [x] `start-dev.sh` — single script to start backend, mock API, and frontend together
-
-**Phase 5: GraphQL Resolvers for Real-Time Dashboard** (Complete)
-- [x] Backend GraphQL resolvers
-  - [x] `SyncJobEventPublisher` — Reactor Sinks.Many for real-time event streaming
-  - [x] `SyncJobQueryResolver` — `syncJob`, `syncJobs` (filter/sort/paginate), `syncMetrics` queries
-  - [x] `SyncJobQueryResolver` field resolvers — `startTime`, `endTime` (LocalDateTime→OffsetDateTime), `duration`, `successRate`, `errors`, `stagingRecords`, `validationStats`
-  - [x] `SyncError.occurredAt` and `StagingRecord.receivedAt` DateTime field resolvers
-  - [x] `SyncJobMutationResolver` — `triggerSync`, `cancelSync` mutations
-  - [x] `SyncJobSubscriptionResolver` — `syncJobUpdated` WebSocket subscription
-  - [x] `SyncJobService` wired to publish events on create/complete/fail
-  - [x] `SyncJobRepository.findAllByOrderByStartTimeDesc()` added
-- [x] Backend unit tests (17 new, 55 total passing)
-  - [x] `SyncJobEventPublisherTest` — 3 tests (matching ID, filtering, multiple subscribers)
-  - [x] `SyncJobQueryResolverTest` — 10 tests (queries, filters, computed fields, metrics)
-  - [x] `SyncJobMutationResolverTest` — 3 tests (trigger, cancel running, cancel completed)
-  - [x] `SyncJobServiceTest` — +1 test (verify event publishing)
-- [x] Frontend GraphQL migration
-  - [x] `useGraphQLDashboard` — Apollo `useQuery` with 10s polling for dashboard data + server metrics
-  - [x] `useGraphQLSyncJob` — `useQuery` + `useSubscription` (WATCH_SYNC_JOB) for real-time job detail
-  - [x] `useGraphQLTriggerSync` — Apollo `useMutation` with refetchQueries
-  - [x] Dashboard page migrated to GraphQL (server-computed metrics)
-  - [x] Job detail page migrated to GraphQL with subscription for real-time updates
-  - [x] TriggerSyncButton migrated to GraphQL mutation
-  - [x] Apollo Client cache fixed (replace strategy for syncJobs)
-  - [x] WATCH_SYNC_JOB subscription updated with `endTime` field
-  - [x] GraphQL-specific TypeScript types added (ValidationStats, StagingRecord, SyncMetrics, MetricsSummary, GraphQLSyncJob)
-- [x] `reactor-test` dependency added to pom.xml for Flux testing
-- [x] `start-dev.sh` improved — auto-kills stale processes on ports 3000/3001/8080, removed `set -e`
-
-**Phase 6: SQS Async Processing via LocalStack** (Complete)
-- [x] AWS SQS integration via Spring Cloud AWS
-  - [x] `spring-cloud-aws-starter-sqs` dependency with BOM version management
-  - [x] `SqsConfig` — SQS client bean with LocalStack endpoint, auto-creates queues + DLQ with redrive policy
-  - [x] `SyncMessage` DTO — jobId, sourceName, syncType for queue messages
-  - [x] `SyncMessageProducer` — serializes and sends sync requests to SQS queue
-  - [x] `SyncMessageConsumer` — `@SqsListener` that deserializes messages, transitions QUEUED→RUNNING, runs pipeline
-- [x] Async job lifecycle
-  - [x] `QUEUED` status added to SyncJob model and GraphQL `SyncStatus` enum
-  - [x] `SyncJobService.createQueuedJob()` — creates job with QUEUED status
-  - [x] `SyncJobService.startJob()` — transitions QUEUED→RUNNING with event publishing
-  - [x] `CustomerPipelineService.runPipelineForJob(jobId)` — extracted method for async consumer
-  - [x] `CustomerIntegrationService.syncCustomersForJob(job)` — staging with existing job
-- [x] Entry points refactored to async
-  - [x] `POST /api/integrations/sync/customers` — returns 202 Accepted with QUEUED job
-  - [x] GraphQL `triggerSync` mutation — returns QUEUED job immediately
-  - [x] GraphQL `cancelSync` — handles QUEUED status (cancellable)
-- [x] Frontend updates
-  - [x] `StatusBadge` — QUEUED status with gray/pulse styling
-  - [x] TypeScript types — QUEUED added to status unions
-  - [x] Polling hooks — poll on QUEUED and RUNNING statuses
-  - [x] GraphQL subscription — active for QUEUED and RUNNING jobs
-- [x] Infrastructure
-  - [x] LocalStack init script (`localstack/init-scripts/01-create-queues.sh`) — creates queue + DLQ on startup
-  - [x] `docker-compose.yml` — mounts init script volume for LocalStack
-  - [x] `application-test.yml` — disables SQS for unit tests with mock SqsClient bean
-  - [x] `@ConditionalOnProperty` on SqsConfig and SyncMessageConsumer for test isolation
-- [x] Tests (10 new, 65 total passing)
-  - [x] `SyncMessageProducerTest` — 2 tests (serialize+send, SQS failure)
-  - [x] `SyncMessageConsumerTest` — 3 tests (success, pipeline failure, invalid JSON)
-  - [x] `SyncJobServiceTest` — +3 tests (createQueuedJob, startJob, startJob not found)
-  - [x] `SyncJobMutationResolverTest` — rewritten for async (4 tests: trigger queued, cancel running/queued/completed)
-  - [x] `CustomerIntegrationServiceTest` — updated + 1 new test (syncCustomersForJob)
-
-**Phase 7: Additional Data Sources (ERP & Accounting)** (Complete)
-- [x] Database migrations
-  - [x] `V3__erp_tables_and_procedure.sql` — `staging.raw_products`, `validated.validated_products`, `[final].products` + `[final].upsert_products` MERGE
-  - [x] `V4__accounting_tables_and_procedure.sql` — `staging.raw_invoices`, `validated.validated_invoices`, `[final].invoices` + `[final].upsert_invoices` MERGE
-- [x] Mock APIs
-  - [x] `mock-apis/erp-api/` (port 3002) — 80 fake products, paginated, delay + 5% failure
-  - [x] `mock-apis/accounting-api/` (port 3003) — 60 fake invoices with line items, paginated, delay + 5% failure
-- [x] ERP Backend Pipeline (13 new files)
-  - [x] `ErpProductResponse`, `TransformedProduct` DTOs
-  - [x] `RawProduct`, `ValidatedProduct`, `FinalProduct` entities + repositories
-  - [x] `ErpApiClient` — paginated fetch with retry (`integration.erp.*`)
-  - [x] `ProductTransformationService` — SKU→uppercase, quantity clamp ≥0
-  - [x] `ProductValidationService` — external_id, sku, name required, price ≥0
-  - [x] `ProductLoadService`, `ProductIntegrationService`, `ProductPipelineService`
-- [x] Accounting Backend Pipeline (13 new files)
-  - [x] `AccountingInvoiceResponse`, `TransformedInvoice` DTOs
-  - [x] `RawInvoice`, `ValidatedInvoice`, `FinalInvoice` entities + repositories
-  - [x] `AccountingApiClient` — paginated fetch with retry (`integration.accounting.*`)
-  - [x] `InvoiceTransformationService` — status→lowercase, currency→uppercase, dueDate→LocalDate.parse
-  - [x] `InvoiceValidationService` — external_id, invoiceNumber, customerName, currency required, amount≥0, status∈{paid,pending,overdue}
-  - [x] `InvoiceLoadService`, `InvoiceIntegrationService`, `InvoicePipelineService`
-- [x] Shared infrastructure updates
-  - [x] `SyncMessageConsumer` — multi-source routing by `sourceName` (CRM/ERP/ACCOUNTING)
-  - [x] `IntegrationController` — `POST /api/integrations/sync/products`, `POST /api/integrations/sync/invoices`
-  - [x] `application.yml` + `application-test.yml` — ERP and Accounting config blocks
-  - [x] `SyncJobQueryResolver` — multi-source `stagingRecords` dispatch via `StagingRecordDTO`
-- [x] Unit tests (62 new, 127 total passing)
-- [x] Frontend updates
-  - [x] `SourceSyncPanel` — three sync buttons (CRM/ERP/Accounting) replacing TriggerSyncButton
-  - [x] `useGraphQLTriggerSync` — accepts `sourceName` parameter
-  - [x] `SyncJobTable` — color-coded source badges
-  - [x] `app/page.tsx` — source filter pills + SourceSyncPanel
-- [x] `start-dev.sh` — ports 3002/3003 added, starts all 5 services
-
-**Phase 8: CI/CD with GitHub Actions + Integration Tests with Testcontainers** (Complete)
-- [x] Maven dependencies and plugins
-  - [x] Testcontainers 2.0.2 BOM + `testcontainers-junit-jupiter`, `testcontainers-mssqlserver`
-  - [x] WireMock Standalone 3.4.2 for HTTP API stubbing
-  - [x] `maven-surefire-plugin` — excludes `*IntegrationTest.java` and `*IT.java` from `./mvnw test`
-  - [x] `maven-failsafe-plugin` — includes `*IntegrationTest.java` and `*IT.java` for `./mvnw verify`
-- [x] Integration test infrastructure
-  - [x] `application-integration-test.yml` — SQL Server driver, Flyway enabled, SQS disabled, WireMock base URLs (port 18089)
-  - [x] `integration-test-init.sql` — creates `dataintegration` database in Testcontainers
-  - [x] `BaseIntegrationTest` — shared Azure SQL Edge container (ARM-native), static WireMock server, `@DynamicPropertySource` for DB, `@BeforeEach` cleanup of all schemas
-  - [x] `WireMockStubs` — paginated response stubs for CRM customers, ERP products, Accounting invoices with factory methods
-- [x] Integration tests (20 total)
-  - [x] `CustomerPipelineIntegrationTest` — 5 tests (full pipeline, upsert/MERGE, partial validation failure, API failure, phone/email normalization)
-  - [x] `ProductPipelineIntegrationTest` — 3 tests (full pipeline, upsert/MERGE, invalid price validation)
-  - [x] `InvoicePipelineIntegrationTest` — 3 tests (full pipeline, upsert/MERGE, invalid status validation)
-  - [x] `JobLifecycleIntegrationTest` — 4 tests (create→complete, failed job end_time, reverse chronological order, errors for job)
-  - [x] `RestApiIntegrationTest` — 5 tests (GET jobs, GET job by ID, 404, GET errors, POST sync returns 202 with `@MockBean` SyncMessageProducer)
-- [x] GitHub Actions CI workflow (`.github/workflows/ci.yml`)
-  - [x] `backend-unit-tests` job — JDK 17, Maven cache, `./mvnw test`
-  - [x] `backend-integration-tests` job — JDK 17, Maven cache, `./mvnw failsafe:integration-test failsafe:verify`
-  - [x] `frontend` job — Node.js 20, npm cache, lint → type-check → build
-  - [x] Triggers on push to `main` and PRs to `main`
-
-**Phase 9: Salesforce Integration + Lightning Web Component** (Complete)
-- [x] Salesforce DTOs
-  - [x] `SalesforceTokenResponse` — OAuth token response: access_token, instance_url, token_type
-  - [x] `SalesforceContact` — SOQL Contact record with @JsonProperty mapping for Salesforce field names
-  - [x] `SalesforceQueryResult` — SOQL query response: totalSize, done, nextRecordsUrl, records
-- [x] Salesforce OAuth integration
-  - [x] `SalesforceAuthService` — Username-Password OAuth flow, in-memory token caching, refreshToken() support
-  - [x] Config via `integration.salesforce.*` properties (login-url, client-id, client-secret, username, password, api-version)
-- [x] Salesforce API client
-  - [x] `SalesforceApiClient` — SOQL query for Contacts, cursor-based pagination via nextRecordsUrl, 401 retry with token refresh, exponential backoff
-- [x] Salesforce integration service
-  - [x] `SalesforceIntegrationService` — fetches contacts, normalizes to CrmCustomerResponse format (FirstName+LastName→name, Mailing*→Address), stages in raw_customers
-  - [x] Per-record error isolation with STAGING_ERROR audit entries
-- [x] Pipeline reuse (no new migration needed)
-  - [x] `CustomerLoadService` — parameterized `loadCustomer(customer, sourceSystem)` overload, backward-compat single-arg method defaults to "CRM"
-  - [x] `CustomerPipelineService` — routes staging by source (SALESFORCE→SalesforceIntegrationService, CRM→CustomerIntegrationService), passes sourceSystem to loadService
-  - [x] `SyncMessageConsumer` — SALESFORCE case routes to customerPipelineService
-  - [x] `SyncJobQueryResolver` — SALESFORCE staging records dispatch to rawCustomerRepository
-- [x] REST & GraphQL endpoints
-  - [x] `POST /api/integrations/sync/salesforce-contacts` — creates QUEUED job with sourceName="SALESFORCE"
-  - [x] GraphQL `triggerSync` mutation works with sourceName="SALESFORCE" (no changes needed)
-- [x] Configuration
-  - [x] `application.yml` — Salesforce integration config block with env var placeholders
-  - [x] `application-test.yml` — dummy Salesforce config for unit tests
-  - [x] `application-integration-test.yml` — Salesforce config pointing to WireMock
-  - [x] `SecurityConfig` — CORS allowedOriginPatterns for *.lightning.force.com, *.my.salesforce.com
-- [x] Frontend updates
-  - [x] `SourceSyncPanel` — Salesforce Contacts button (sky-600 color)
-  - [x] `SyncJobTable` — SALESFORCE source badge (sky color scheme)
-- [x] Unit tests (17 new, 144 total passing)
-  - [x] `SalesforceAuthServiceTest` — 5 tests (fetch+cache, instance URL, refresh, REST failure, null response)
-  - [x] `SalesforceApiClientTest` — 5 tests (single page, pagination, 401 retry, max retries, null result)
-  - [x] `SalesforceIntegrationServiceTest` — 5 tests (success, normalization, API failure, per-record error isolation, empty response)
-  - [x] `CustomerLoadServiceTest` — +1 test (custom sourceSystem param)
-  - [x] `SyncMessageConsumerTest` — +1 test (SALESFORCE routing to customer pipeline)
-- [x] Integration tests (4 new, 24 total)
-  - [x] `WireMockStubs` — `stubSalesforceAuth()`, `stubSalesforceContacts()`, `createSalesforceContact()` factory
-  - [x] `SalesforcePipelineIntegrationTest` — 4 tests (full pipeline with source_system='SALESFORCE', upsert/MERGE, partial validation, normalization)
-- [x] Documentation
-  - [x] `docs/salesforce-setup.md` — Developer Org setup, Connected App, OAuth config, env vars, testing guide
-- [x] Lightning Web Component (`salesforce-lwc/`)
-  - [x] SFDX project generated via `sf project generate`
-  - [x] `DataPlatformController.cls` — Apex controller with getRecentSyncJobs() and triggerSync() HTTP callouts
-  - [x] `syncDashboard` LWC — Sync button, job table with status badges, auto-refresh polling
-  - [x] Exposed to Lightning App Pages, Record Pages, Home Page
+Detailed per-phase implementation notes (file-by-file checklists) live in git
+history and [docs/PROJECT_SPEC.md](./docs/PROJECT_SPEC.md). Architecture rationale
+is captured in [docs/CODEBASE_GUIDE.md](./docs/CODEBASE_GUIDE.md).
 
 ## Key Design Decisions
 
@@ -634,4 +374,4 @@ git push origin main             # Push to GitHub
 
 This project is designed to be portfolio-ready and demonstrates skills required for enterprise software engineering roles. It showcases real-world integration patterns, data quality management, and modern development practices.
 
-For complete implementation guide with day-by-day tasks and Cursor AI prompts, see [PROJECT_SPEC.md](./PROJECT_SPEC.md).
+For complete implementation guide with day-by-day tasks and Cursor AI prompts, see [docs/PROJECT_SPEC.md](./docs/PROJECT_SPEC.md).
