@@ -14,6 +14,7 @@ export default function SourceSyncPanel() {
 
   return (
     <div className="flex items-center gap-2">
+      <span className="mr-1 text-sm font-medium text-gray-700">Sync:</span>
       {sources.map((source) => (
         <button
           key={source.name}
