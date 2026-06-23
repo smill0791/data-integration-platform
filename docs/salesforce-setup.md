@@ -21,6 +21,7 @@ This guide walks through setting up a Salesforce Developer Org to use as a real 
 ## 3. Create a Connected App (for OAuth 2.0)
 
 1. **Setup** -> search "App Manager" -> **New Connected App**
+   - (Salesforce also offers the newer **External Client App Manager**; this guide uses the classic Connected App. The **OAuth Usage** page is a monitoring view only — apps are created in App Manager, not there.)
 2. Fill in:
    - Connected App Name: `Data Integration Platform`
    - API Name: `Data_Integration_Platform`
@@ -28,40 +29,55 @@ This guide walks through setting up a Salesforce Developer Org to use as a real 
 3. Enable OAuth Settings:
    - Check **Enable OAuth Settings**
    - Callback URL: `https://login.salesforce.com/services/oauth2/success`
-   - Selected OAuth Scopes: **Full access (full)**, **Perform requests at any time (refresh_token, offline_access)**
+     (required field, but the Client Credentials flow never uses it — a placeholder is fine)
+   - Selected OAuth Scopes: **Manage user data via APIs (api)** (Full access also works)
 4. Save and wait 2-10 minutes for propagation
 
-## 4. Configure OAuth (Username-Password Flow)
+## 4. Enable the Client Credentials Flow
 
-The **Username-Password flow** is simplest for a portfolio demo (no browser redirect needed):
+This project uses the **OAuth 2.0 Client Credentials flow** — a two-legged,
+server-to-server grant with **no user login, browser redirect, or security token**.
+The backend authenticates as the app itself using only the consumer key and secret
+(see `SalesforceAuthService`, which posts `grant_type=client_credentials`).
 
-1. From the Connected App page, click **Manage Consumer Details** -> copy **Consumer Key** and **Consumer Secret**
-2. Get your **Security Token**: Setup -> search "Reset My Security Token" -> click Reset -> check email
-3. Your password for the API call = `YOUR_PASSWORD` + `YOUR_SECURITY_TOKEN` (concatenated, no separator)
+1. From **App Manager**, find the app -> dropdown -> **Manage** -> **Edit Policies**
+2. Under **Client Credentials Flow**, set **Run As** to an execution user. This step is
+   required: because no human logs in, Salesforce issues the token in this user's
+   context, so that user's profile, permissions, and record access determine what the
+   sync can see. Choose a user with API access and visibility of the Contacts to sync.
+3. Save. (Newer orgs also expose an **Enable Client Credentials Flow** toggle in the
+   app's OAuth settings — make sure it is on.)
+4. Back on the app, click **Manage Consumer Details** -> verify your identity ->
+   copy the **Consumer Key** and **Consumer Secret**.
 
-> **Interview talking point**: "In production I'd use the JWT Bearer or Client Credentials flow for server-to-server auth, but the Username-Password flow is appropriate for this demo context."
+> **Interview talking point**: "I use the Client Credentials flow because the sync is a
+> backend service with no user present — it runs as a designated Salesforce user, so
+> permissions are governed by that user. The trade-off is a shared client secret; in
+> production I'd consider JWT Bearer (a key-signed assertion) so no secret crosses the wire."
 
 ## 5. Set Environment Variables
 
 ```bash
 export SF_CLIENT_ID="your_consumer_key"
 export SF_CLIENT_SECRET="your_consumer_secret"
-export SF_USERNAME="your_salesforce_username"
-export SF_PASSWORD="your_password_plus_security_token"
-# Optional overrides (defaults shown):
-# export SF_LOGIN_URL="https://login.salesforce.com"
+# Client Credentials token requests must go to your org's My Domain host,
+# NOT the generic login.salesforce.com:
+export SF_LOGIN_URL="https://your-domain.my.salesforce.com"
+# Optional override (default shown):
 # export SF_API_VERSION="v59.0"
 ```
+
+> **Gotcha**: For the Client Credentials flow, the token endpoint must be your org's
+> **My Domain** URL (e.g. `https://mycompany-dev-ed.develop.my.salesforce.com`), not
+> `login.salesforce.com`. Requests to the generic login host will be rejected.
 
 ## 6. Test the Connection
 
 ```bash
-curl -X POST https://login.salesforce.com/services/oauth2/token \
-  -d "grant_type=password" \
+curl -X POST "$SF_LOGIN_URL/services/oauth2/token" \
+  -d "grant_type=client_credentials" \
   -d "client_id=$SF_CLIENT_ID" \
-  -d "client_secret=$SF_CLIENT_SECRET" \
-  -d "username=$SF_USERNAME" \
-  -d "password=$SF_PASSWORD"
+  -d "client_secret=$SF_CLIENT_SECRET"
 ```
 
 Response should include `access_token` and `instance_url`.
