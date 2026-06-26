@@ -16,6 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -41,11 +42,30 @@ public class SalesforceApiClient {
     }
 
     public List<SalesforceContact> fetchContacts() {
+        return queryAll(SOQL_QUERY);
+    }
+
+    /**
+     * Fetches only the contacts matching the given Salesforce IDs. Used by the
+     * "retry failed records" flow so a retry re-pulls just the records that
+     * previously failed, picking up any corrections made in Salesforce.
+     */
+    public List<SalesforceContact> fetchContactsByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        String inClause = ids.stream()
+                .map(id -> "'" + id.replace("'", "\\'") + "'")
+                .collect(Collectors.joining(","));
+        return queryAll(SOQL_QUERY + " WHERE Id IN (" + inClause + ")");
+    }
+
+    private List<SalesforceContact> queryAll(String soql) {
         List<SalesforceContact> allContacts = new ArrayList<>();
         String instanceUrl = authService.getInstanceUrl();
         URI uri = UriComponentsBuilder
                 .fromHttpUrl(instanceUrl + "/services/data/" + apiVersion + "/query")
-                .queryParam("q", SOQL_QUERY)
+                .queryParam("q", soql)
                 .build()
                 .encode()
                 .toUri();

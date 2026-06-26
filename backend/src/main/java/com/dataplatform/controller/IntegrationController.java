@@ -56,6 +56,24 @@ public class IntegrationController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(job));
     }
 
+    @PostMapping("/jobs/{id}/retry-failed")
+    public ResponseEntity<SyncJobDTO> retryFailedRecords(@PathVariable Long id) {
+        SyncJobDTO original = syncJobService.getJobById(id);
+        List<String> failedIds = syncJobService.getFailedRecordIds(id);
+
+        if (failedIds.isEmpty()) {
+            log.info("No failed records to retry for job {}", id);
+            return ResponseEntity.noContent().build();
+        }
+
+        log.info("Triggering retry of {} failed records from job {} (source={})",
+                failedIds.size(), id, original.getSourceName());
+        SyncJob retryJob = syncJobService.createQueuedJob(original.getSourceName(), "RETRY");
+        syncMessageProducer.sendSyncRequest(
+                retryJob.getId(), retryJob.getSourceName(), retryJob.getSyncType(), failedIds);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncJobDTO.fromEntity(retryJob));
+    }
+
     @GetMapping("/jobs")
     public ResponseEntity<List<SyncJobDTO>> getRecentJobs() {
         return ResponseEntity.ok(syncJobService.getRecentJobs());

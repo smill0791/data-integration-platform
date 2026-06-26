@@ -11,9 +11,13 @@ function formatDateTime(dateStr: string | null): string {
 export default function SyncJobDetails({
   job,
   errors,
+  onRetry,
+  retrying = false,
 }: {
   job: SyncJob;
   errors: SyncError[];
+  onRetry?: () => void;
+  retrying?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -59,9 +63,26 @@ export default function SyncJobDetails({
 
       {errors.length > 0 && (
         <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="mb-4 text-lg font-medium text-gray-900">
-            Error Log ({errors.length})
-          </h3>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">
+              Error Log ({errors.length})
+            </h3>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                disabled={retrying}
+                className="inline-flex items-center rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+              >
+                {retrying ? (
+                  <svg className="mr-1.5 h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : null}
+                Retry failed records
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

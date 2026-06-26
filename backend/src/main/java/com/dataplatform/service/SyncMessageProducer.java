@@ -22,11 +22,16 @@ public class SyncMessageProducer {
     private String queueName;
 
     public void sendSyncRequest(Long jobId, String sourceName, String syncType) {
+        sendSyncRequest(jobId, sourceName, syncType, null);
+    }
+
+    public void sendSyncRequest(Long jobId, String sourceName, String syncType, java.util.List<String> recordIds) {
         try {
             SyncMessage message = SyncMessage.builder()
                     .jobId(jobId)
                     .sourceName(sourceName)
                     .syncType(syncType)
+                    .recordIds(recordIds)
                     .build();
 
             String messageBody = objectMapper.writeValueAsString(message);

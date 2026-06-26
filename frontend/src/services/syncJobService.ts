@@ -27,3 +27,17 @@ export function triggerCustomerSync(): Promise<SyncJob> {
     method: 'POST',
   });
 }
+
+export async function retryFailedRecords(id: number): Promise<SyncJob | null> {
+  const response = await fetch(`${API_BASE}/api/integrations/jobs/${id}/retry-failed`, {
+    method: 'POST',
+  });
+  // 204 No Content => nothing failed to retry
+  if (response.status === 204) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}

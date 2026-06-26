@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,11 +36,11 @@ class SyncMessageConsumerTest {
         SyncMessage message = SyncMessage.builder().jobId(1L).sourceName("CRM").syncType("FULL").build();
         String json = objectMapper.writeValueAsString(message);
         when(syncJobService.startJob(1L)).thenReturn(SyncJob.builder().id(1L).status("RUNNING").startTime(LocalDateTime.now()).build());
-        when(customerPipelineService.runPipelineForJob(1L)).thenReturn(SyncJobDTO.builder().id(1L).status("COMPLETED").build());
+        when(customerPipelineService.runPipelineForJob(eq(1L), isNull())).thenReturn(SyncJobDTO.builder().id(1L).status("COMPLETED").build());
 
         consumer.handleSyncMessage(json);
 
-        verify(customerPipelineService).runPipelineForJob(1L);
+        verify(customerPipelineService).runPipelineForJob(eq(1L), isNull());
         verify(productPipelineService, never()).runPipelineForJob(any());
         verify(invoicePipelineService, never()).runPipelineForJob(any());
     }
@@ -77,11 +78,11 @@ class SyncMessageConsumerTest {
         SyncMessage message = SyncMessage.builder().jobId(5L).sourceName("SALESFORCE").syncType("FULL").build();
         String json = objectMapper.writeValueAsString(message);
         when(syncJobService.startJob(5L)).thenReturn(SyncJob.builder().id(5L).status("RUNNING").startTime(LocalDateTime.now()).build());
-        when(customerPipelineService.runPipelineForJob(5L)).thenReturn(SyncJobDTO.builder().id(5L).status("COMPLETED").build());
+        when(customerPipelineService.runPipelineForJob(eq(5L), isNull())).thenReturn(SyncJobDTO.builder().id(5L).status("COMPLETED").build());
 
         consumer.handleSyncMessage(json);
 
-        verify(customerPipelineService).runPipelineForJob(5L);
+        verify(customerPipelineService).runPipelineForJob(eq(5L), isNull());
         verify(productPipelineService, never()).runPipelineForJob(any());
         verify(invoicePipelineService, never()).runPipelineForJob(any());
     }
@@ -92,7 +93,7 @@ class SyncMessageConsumerTest {
         String json = objectMapper.writeValueAsString(message);
         SyncJob startedJob = SyncJob.builder().id(4L).status("RUNNING").startTime(LocalDateTime.now()).build();
         when(syncJobService.startJob(4L)).thenReturn(startedJob);
-        when(customerPipelineService.runPipelineForJob(4L)).thenThrow(new RuntimeException("Pipeline exploded"));
+        when(customerPipelineService.runPipelineForJob(eq(4L), isNull())).thenThrow(new RuntimeException("Pipeline exploded"));
         when(syncJobService.getJobEntity(4L)).thenReturn(startedJob);
         when(syncJobService.failJob(any(), any())).thenReturn(startedJob);
 

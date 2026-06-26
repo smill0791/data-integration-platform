@@ -28,9 +28,16 @@ public class SalesforceIntegrationService {
     private final ObjectMapper objectMapper;
 
     public SyncJobDTO syncContactsForJob(SyncJob job) {
+        return syncContactsForJob(job, null);
+    }
+
+    public SyncJobDTO syncContactsForJob(SyncJob job, List<String> contactIds) {
+        boolean isRetry = contactIds != null && !contactIds.isEmpty();
         List<SalesforceContact> contacts;
         try {
-            contacts = salesforceApiClient.fetchContacts();
+            contacts = isRetry
+                    ? salesforceApiClient.fetchContactsByIds(contactIds)
+                    : salesforceApiClient.fetchContacts();
         } catch (Exception ex) {
             log.error("Failed to fetch contacts from Salesforce API", ex);
             syncJobService.failJob(job, "Salesforce API fetch failed: " + ex.getMessage());

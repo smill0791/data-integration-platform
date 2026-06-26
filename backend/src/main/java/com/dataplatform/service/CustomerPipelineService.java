@@ -42,12 +42,16 @@ public class CustomerPipelineService {
     }
 
     public SyncJobDTO runPipelineForJob(Long jobId) {
+        return runPipelineForJob(jobId, null);
+    }
+
+    public SyncJobDTO runPipelineForJob(Long jobId, List<String> recordIds) {
         SyncJob job = syncJobService.getJobEntity(jobId);
 
         // If job doesn't have staging data yet, run staging first
         List<RawCustomer> rawCustomers = rawCustomerRepository.findBySyncJobId(job.getId());
         if (rawCustomers.isEmpty() && "RUNNING".equals(job.getStatus())) {
-            SyncJobDTO stagingResult = runStaging(job);
+            SyncJobDTO stagingResult = runStaging(job, recordIds);
             if ("FAILED".equals(stagingResult.getStatus())) {
                 log.warn("Staging failed for job {}, skipping pipeline", jobId);
                 return stagingResult;
@@ -98,9 +102,9 @@ public class CustomerPipelineService {
         return SyncJobDTO.fromEntity(job);
     }
 
-    private SyncJobDTO runStaging(SyncJob job) {
+    private SyncJobDTO runStaging(SyncJob job, List<String> recordIds) {
         if ("SALESFORCE".equals(job.getSourceName())) {
-            return salesforceIntegrationService.syncContactsForJob(job);
+            return salesforceIntegrationService.syncContactsForJob(job, recordIds);
         }
         return customerIntegrationService.syncCustomersForJob(job);
     }

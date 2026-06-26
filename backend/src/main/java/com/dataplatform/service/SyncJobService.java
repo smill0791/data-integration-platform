@@ -106,6 +106,12 @@ public class SyncJobService {
                 .toList();
     }
 
+    public List<String> getFailedRecordIds(Long jobId) {
+        syncJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + jobId));
+        return syncErrorRepository.findDistinctFailedRecordsByJobId(jobId);
+    }
+
     public List<SyncErrorDTO> getErrorsForJob(Long jobId) {
         syncJobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sync job not found: " + jobId));
